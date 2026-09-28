@@ -1,33 +1,139 @@
-import type { RoundKey, RoundResult } from "@/types/arena";
+import type {
+  Institute, InterviewSession, Offer, ProfileSectionKey, RoundKey, RoundStatus,
+  SessionRound, StudentProfile,
+} from "@/types/arena";
 
 export const ROUND_ORDER: RoundKey[] = ["screening", "hr_bp", "functional", "ceo"];
-export const REQUIRED_PROFILE_SECTIONS = ["personal", "education", "skills", "preferences"] as const;
+export const REQUIRED_PROFILE_SECTIONS: ProfileSectionKey[] = ["personal", "education", "skills", "preferences"];
 
-export function canStartInterview(completed: string[]) {
-  return REQUIRED_PROFILE_SECTIONS.every((section) => completed.includes(section));
+export const ROUND_DURATION_SEC: Record<RoundKey, number> = {
+  screening: 5 * 60,
+  hr_bp: 8 * 60,
+  functional: 10 * 60,
+  ceo: 6 * 60,
+};
+
+const SECTION_WEIGHTS: Record<ProfileSectionKey, number> = {
+  personal: 16,
+  education: 16,
+  skills: 16,
+  preferences: 12,
+  summary: 8,
+  experience: 8,
+  projects: 8,
+  certifications: 6,
+  achievements: 4,
+  activities: 3,
+  languages: 3,
+};
+
+function sectionFilled(profile: StudentProfile, key: ProfileSectionKey): boolean {
+  const value = profile[key];
+  if (value === null || value === undefined) return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "string") return value.trim().length > 0;
+  return true;
 }
 
-export function canUnlockCeo(rounds: RoundResult[], threshold = 65) {
-  const scores = rounds
-    .filter((item) => item.round !== "ceo" && item.score !== null)
-    .map((item) => item.score as number);
-  return scores.length === 3 && scores.reduce((total, score) => total + score, 0) / 3 >= threshold;
+export function filledSections(profile: StudentProfile): ProfileSectionKey[] {
+  return (Object.keys(SECTION_WEIGHTS) as ProfileSectionKey[]).filter((key) => sectionFilled(profile, key));
 }
 
-export function canRetry(round: RoundResult) {
-  return round.verdict === "needs_improvement" && round.try_no === 1;
-}
-
-export function canResume(round: RoundResult) {
-  return !round.resume_used;
-}
-
-export function canPrintCv(allRoundsDone: boolean, offerAccepted: boolean) {
-  return allRoundsDone && offerAccepted;
+export function profileStrength(profile: StudentProfile): number {
+  return filledSections(profile).reduce((total, key) => total + SECTION_WEIGHTS[key], 0);
 }
 
 export function profileTier(score: number) {
-  if (score >= 80) return { name: "Strong", match: "Product MNCs and top firms", ctc: "6–10 LPA" };
-  if (score >= 50) return { name: "Good", match: "Mid-size firms and IT services", ctc: "4–6 LPA" };
-  return { name: "Starter", match: "Startups and smaller firms", ctc: "2.5–4 LPA" };
+  if (score >= 80) return { name: "Strong" as const, match: "Product MNCs and top firms", ctc: "6–10 LPA" };
+  if (score >= 50) return { name: "Good" as const, match: "Mid-size firms and IT services", ctc: "4–6 LPA" };
+  return { name: "Starter" as const, match: "Startups and smaller firms", ctc: "2.5–4 LPA" };
 }
+
+export function canStartInterview(profile: StudentProfile | null): boolean {
+  if (!profile) return false;
+  return REQUIRED_PROFILE_SECTIONS.every((section) => sectionFilled(profile, section));
+}
+
+/** Current row for a round = the one flagged is_current (a retry replaces try 1). */
+export function currentRound(rounds: SessionRound[], round: RoundKey): SessionRound | undefined {
+  return rounds.find((r) => r.round === round && r.is_current);
+}
+
+export function roundStatus(rounds: SessionRound[], round: RoundKey): RoundStatus {
+  const row = currentRound(rounds, round);
+  if (row) return row.status;
+  const idx = ROUND_ORDER.indexOf(round);
+  const prev = ROUND_ORDER[idx - 1];
+  if (!prev) return "ready";
+  const prevRow = currentRound(rounds, prev);
+  return prevRow?.status === "completed" && prevRow.verdict === "passed" ? "ready" : "locked";
+}
+
+export function canRetry(round: SessionRound): boolean {
+  return round.verdict === "needs_improvement" && round.try_no === 1 && round.is_current;
+}
+
+export function canResume(round: SessionRound): boolean {
+  return round.status === "live" && round.disconnect_count > 0 && !round.resume_used;
+}
+
+/** Average of current screening, HR BP and functional scores (try 2 replaces try 1). */
+export function currentAverage(rounds: SessionRound[]): number | null {
+  const scores = ROUND_ORDER.slice(0, 3)
+    .map((key) => currentRound(rounds, key))
+    .filter((r): r is SessionRound => !!r && r.status === "completed" && r.score !== null)
+    .map((r) => r.score as number);
+  if (scores.length !== 3) return null;
+  return scores.reduce((a, b) => a + b, 0) / 3;
+}
+
+export function ceoUnlocked(rounds: SessionRound[], institute: Institute): boolean {
+  const avg = currentAverage(rounds);
+  return avg !== null && avg >= institute.ceo_threshold;
+}
+
+export function allRoundsDone(rounds: SessionRound[]): boolean {
+  return ROUND_ORDER.every((key) => {
+    const row = currentRound(rounds, key);
+    return row?.status === "completed";
+  });
+}
+
+/** Student can go no further: incomplete round, or CEO locked below threshold. */
+export function stuck(session: InterviewSession, rounds: SessionRound[], institute: Institute): boolean {
+  if (session.status !== "in_progress") return false;
+  const anyIncomplete = rounds.some((r) => r.is_current && r.status === "incomplete");
+  if (anyIncomplete) return true;
+  const ceo = currentRound(rounds, "ceo");
+  if (ceo?.status === "locked" && !ceoUnlocked(rounds, institute)) return true;
+  const anyFailed = ROUND_ORDER.some((key) => {
+    const row = currentRound(rounds, key);
+    return row?.verdict === "needs_improvement" && !canRetry(row);
+  });
+  return anyFailed;
+}
+
+export function reportsUnlocked(session: InterviewSession, rounds: SessionRound[], institute: Institute): boolean {
+  return session.status === "completed" || stuck(session, rounds, institute);
+}
+
+export function canRequestRestart(
+  session: InterviewSession,
+  rounds: SessionRound[],
+  institute: Institute,
+  pending: boolean,
+): boolean {
+  if (pending) return false;
+  return session.status === "completed" || stuck(session, rounds, institute);
+}
+
+export function canPrintCv(rounds: SessionRound[], offer: Offer | null): boolean {
+  return allRoundsDone(rounds) && offer?.decision === "accepted";
+}
+
+export const ROUND_LABELS: Record<RoundKey, string> = {
+  screening: "Sera screening",
+  hr_bp: "HR BP round",
+  functional: "Functional",
+  ceo: "CEO round",
+};

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, BarChart3, Building2, Check, ChevronDown, FileText, Mic2, ShieldCheck, Target, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SeraMark, Surface } from "./shared";
+import { SeraMark, Surface } from "@/components/shared";
 
 const rounds = [
   { n: "01", title: "Sera screening", copy: "A focused five-minute voice conversation to understand your story.", color: "bg-sage" },
