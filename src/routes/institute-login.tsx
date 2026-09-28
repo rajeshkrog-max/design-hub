@@ -1,3 +1,3 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { InstituteLogin } from "@/components/sera/auth-pages";
+import { InstituteLogin } from "@/components/auth";
 export const Route=createFileRoute("/institute-login")({head:()=>({meta:[{title:"Institute access — Sera Interview Arena"},{name:"description",content:"Secure access for placement and career teams."},{property:"og:title",content:"Institute access — Sera Interview Arena"},{property:"og:description",content:"Open the Sera institute workspace."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:InstituteLogin});

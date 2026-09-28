@@ -1,3 +1,3 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AuthPage as LoginChoice } from "@/components/sera/auth-pages";
+import { AuthPage as LoginChoice } from "@/components/auth";
 export const Route=createFileRoute("/login")({head:()=>({meta:[{title:"Choose login — Sera Interview Arena"},{name:"description",content:"Choose student or institute access to Sera Interview Arena."},{property:"og:title",content:"Choose login — Sera Interview Arena"},{property:"og:description",content:"Student and institute access to Sera Interview Arena."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:LoginChoice});

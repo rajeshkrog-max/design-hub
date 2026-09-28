@@ -1,3 +1,3 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AcceptInvite } from "@/components/sera/auth-pages";
+import { AcceptInvite } from "@/components/auth";
 export const Route=createFileRoute("/invite")({head:()=>({meta:[{title:"Accept invite — Sera Interview Arena"},{name:"description",content:"Accept an invitation to join Sera Interview Arena."},{property:"og:title",content:"Accept invite — Sera Interview Arena"},{property:"og:description",content:"Join your institute in Sera Interview Arena."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:AcceptInvite});
