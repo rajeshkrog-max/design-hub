@@ -27,7 +27,7 @@ export const students: Student[] = names.map((name, index) => ({
   created_at: "2026-08-14",
   demo_state: states[index % states.length] ?? "not_started",
   profile_strength: 48 + ((index * 7) % 49),
-  current_round: index % 7 === 6 ? null : (["screening", "hr_bp", "functional", "ceo"] as const)[index % 4],
+  current_round: index % 7 === 6 ? null : ((["screening", "hr_bp", "functional", "ceo"] as const)[index % 4] ?? "screening"),
   last_score: index % 7 === 6 ? null : 54 + ((index * 5) % 39),
   verdict: index % 7 === 6 ? "Not started" : index % 4 === 2 ? "Needs improvement" : "Passed",
   weak_area: ["SQL depth", "Answer structure", "Salary alignment", "Aptitude"][index % 4] ?? "Communication",
