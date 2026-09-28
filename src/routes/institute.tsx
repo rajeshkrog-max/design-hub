@@ -1,0 +1,3 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { InstituteApp } from "@/components/sera/institute-app";
+export const Route=createFileRoute("/institute")({head:()=>({meta:[{title:"Institute workspace — Sera Interview Arena"},{name:"description",content:"Monitor student readiness, cohort analytics, and premium placement reports."},{property:"og:title",content:"Institute workspace — Sera Interview Arena"},{property:"og:description",content:"Placement intelligence for every student and cohort."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:InstituteApp});
