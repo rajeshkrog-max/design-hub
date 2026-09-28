@@ -30,7 +30,7 @@ export function AptitudePanel({ user, roundId, onDone }: { user: SessionUser; ro
           <div key={q.id}>
             <p className="text-sm font-medium">{i + 1}. {q.prompt}</p>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              {q.options.map((opt, oi) => (
+              {(q.options ?? []).map((opt, oi) => (
                 <button
                   key={oi}
                   onClick={() => setAnswers({ ...answers, [q.id]: oi })}
