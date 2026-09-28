@@ -85,14 +85,14 @@ export function ReportsTab({ user }: { user: SessionUser }) {
         <Surface className="p-6">
           <h2 className="font-medium">Your roadmap</h2>
           <ol className="mt-4 space-y-3">
-            {((report.report.report.roadmap as string[] | undefined) ?? []).map((step, i) => (
+            {((report.report.report["roadmap"] as string[] | undefined) ?? []).map((step, i) => (
               <li key={i} className="flex gap-3 text-sm">
                 <span className="grid size-6 shrink-0 place-items-center rounded-full bg-sage text-xs font-medium">{i + 1}</span>
                 <span className="leading-6">{step}</span>
               </li>
             ))}
           </ol>
-          <p className="mt-5 text-sm text-muted-foreground">{(report.report.report.encouragement as string | undefined) ?? ""}</p>
+          <p className="mt-5 text-sm text-muted-foreground">{(report.report.report["encouragement"] as string | undefined) ?? ""}</p>
         </Surface>
       )}
 

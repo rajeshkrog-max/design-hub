@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sera Interview Arena · design reference</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+body{margin:0;background:#E6E7EB;font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;padding:24px}
+.note{max-width:1040px;margin:0 auto 14px;font-size:12px;color:#6B6E76}
+.fr{max-width:1040px;margin:0 auto;background:#E6E7EB;border-radius:22px;padding:18px;color:#2E3036;font-size:13px;line-height:1.55}
+.cl{background:#E6E7EB;border-radius:18px;box-shadow:6px 6px 14px #C4C6CC,-6px -6px 14px #FFFFFF}
+.ci{background:#E6E7EB;border-radius:14px;box-shadow:inset 3px 3px 7px #C9CBD1,inset -3px -3px 7px #FFFFFF}
+.pl{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11px}
+.sb{border:none;background:#E6E7EB;border-radius:12px;padding:8px 13px;font-size:12px;color:#2E3036;box-shadow:4px 4px 9px #C4C6CC,-4px -4px 9px #FFF;cursor:pointer;font-family:inherit}
+.sb.on{box-shadow:inset 3px 3px 7px #C4C6CC,inset -3px -3px 7px #FFF;color:#27500A}
+.sb.off{color:#9A9CA3;box-shadow:inset 2px 2px 5px #C9CBD1,inset -2px -2px 5px #FFF}
+.sb.pr{background:#1F2126;color:#fff;box-shadow:3px 3px 8px #C4C6CC}
+.sb.q{box-shadow:none;background:transparent;color:#6B6E76}
+.mu{color:#6B6E76}.g{display:grid;gap:12px}.h{font-weight:500}.sm{font-size:11px}.lk{color:#27500A;cursor:pointer}
+.row{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer}
+.row+.row{border-top:0.5px solid #D2D4D9}
+.fr input,.fr textarea{background:#E6E7EB;border:none;border-radius:12px;box-shadow:inset 3px 3px 7px #C9CBD1,inset -3px -3px 7px #FFF;color:#2E3036;width:100%;font-size:12px;padding:9px 11px;box-sizing:border-box;font-family:inherit}
+</style>
+</head>
+<body>
+<div class="note">Design reference only. Use for mood, layout ideas and flow logic, not as a strict spec. Candidate side shown. "Demo:" links simulate states.</div>
+<div class="fr">
+<div class="cl" style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:16px;flex-wrap:wrap">
+<div style="width:26px;height:26px;border-radius:50%;background:#A9C8A0;display:flex;align-items:center;justify-content:center;color:#27500A"><i class="ti ti-sparkles"></i></div>
+<span class="h" style="letter-spacing:1.5px">SERA INTERVIEW ARENA</span><span style="flex:1"></span>
+<span style="display:flex;gap:6px"><button class="sb on" data-t="home">Home</button><button class="sb" data-t="interview">Interview</button><button class="sb" data-t="reports">Reports</button><button class="sb" data-t="resources">Resources</button></span>
+<span class="pl ci">Progress status · 42%</span>
+<div style="width:26px;height:26px;border-radius:50%;background:#F3C3B0;display:flex;align-items:center;justify-content:center;color:#712B13;font-size:11px">RK</div></div>
+<div id="view"></div></div>
+<script>
+const C={scr:['#A9C8A0','#27500A'],hr:['#F2B25C','#633806'],fn:['#EDB3C2','#72243E'],ceo:['#B5D4F4','#0C447C']};
+const R={scr:{n:'Sera screening',p:'Sera',ro:'AI screener',st:['Choose company','Interview','Result'],t:'02:48',tot:'05:00',s:71,v:'Pass',pc:100,fw:'Forwarded to HR BP: probe salary expectations and team conflict.'},
+hr:{n:'HR BP round',p:'Ananya Mehta',ro:'HR business partner',st:['Interview','Result'],t:'04:10',tot:'08:00',s:64,v:'Pass',pc:100,fw:'Forwarded to functional: CV claims REST APIs, verify depth.'},
+fn:{n:'Functional round',p:'Vikram Shah',ro:'Hiring manager',st:['Aptitude','Interview','Result'],t:'06:05',tot:'10:00',s:58,v:'Needs improvement',pc:100,fw:'Below the pass bar. Your one retry replaces this score.'},
+ceo:{n:'CEO round',p:'CEO',ro:'Final round',st:['Interview','Offer'],t:'03:30',tot:'06:00',s:null,v:'Pending',pc:0,fw:''}};
+const S={t:'home',r:'scr',st:{scr:0,hr:0,fn:0,ceo:0},co:0,sc:'fail',off:null,gap:'All',open:null,dc:{},rt:{},ceo:0,rq:0,cv:0,cvm:0,opt:{}};
+const SEC=[
+{k:'per',n:'Personal details',i:'user',req:1,w:10,d:1,s:'Riya Kulkarni · Pune',f:[['Full name','Riya Kulkarni',1],['Email','riya.k@email.com',1],['Phone','+91 98220 00000',1],['City','Pune',1],['LinkedIn','',0,'linkedin.com/in/…']]},
+{k:'edu',n:'Education',i:'school',req:1,w:20,d:1,s:'BE computer science · 8.1 CGPA',f:[['Degree and branch','BE computer science',1],['College','MIT College of Engineering, Pune',1],['Graduating year','2026',1],['CGPA or percentage','8.1',1],['Class XII percentage','',0,'86%'],['Class X percentage','',0,'91%']]},
+{k:'sk',n:'Skills',i:'bolt',req:1,w:15,d:1,s:'Java, Node.js, SQL and 5 more',f:[['Technical skills','Java, Node.js, SQL, React, Git',1],['Tools','Postman, Docker',0],['Soft skills','',0,'Teamwork, presentation']]},
+{k:'pref',n:'Job preferences',i:'target',req:1,w:0,d:0,s:'Needed before your first interview',f:[['Role you want','Software engineer',1],['Preferred city','',1,'Pune, Bengaluru'],['Expected salary (LPA)','',1,'5']]},
+{k:'sum',n:'About you',i:'quote',req:0,w:5,d:1,s:'Sera drafted this from your CV',f:[['Short summary','CS graduate who built a campus ordering app used by 1,200 students.',0]]},
+{k:'exp',n:'Internships and work',i:'briefcase',req:0,w:15,d:1,s:'Backend intern · 3 months',f:[['Company','Brightpath Softech',0],['Role','Backend intern',0],['What you achieved','',0,'Built 6 REST endpoints']]},
+{k:'pro',n:'Projects',i:'code',req:0,w:20,d:0,s:'Adds the most to your strength',f:[['Project name','',0,'Campus canteen ordering app'],['What it does','',0,'Students order food ahead of breaks'],['Result','',0,'1,200 users, wait cut to 4 minutes']]},
+{k:'cer',n:'Certifications',i:'certificate',req:0,w:5,d:0,s:'Add if you have any',f:[['Certification','',0,'AWS Cloud Practitioner'],['Issued by','',0,'Amazon']]},
+{k:'ach',n:'Achievements',i:'trophy',req:0,w:5,d:0,s:'Hackathons, ranks, coding profiles',f:[['Achievement','',0,'Hackathon finalist']]},
+{k:'act',n:'Activities',i:'users',req:0,w:5,d:0,s:'Clubs, volunteering, sports',f:[['Activity','',0,'Coding club lead']]}];
+const ring=(v,c,l,z=62)=>{const r=z/2-6,L=2*Math.PI*r;return `<div style="text-align:center"><svg width="${z}" height="${z}" viewBox="0 0 ${z} ${z}"><circle cx="${z/2}" cy="${z/2}" r="${r}" fill="none" stroke="#D3D5DA" stroke-width="6"/><circle cx="${z/2}" cy="${z/2}" r="${r}" fill="none" stroke="${c}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(v/100*L).toFixed(1)} ${L.toFixed(1)}" transform="rotate(-90 ${z/2} ${z/2})"/><text x="${z/2}" y="${z/2+5}" text-anchor="middle" font-size="${z>80?20:13}" fill="#2E3036">${v}</text></svg>${l?`<div class="mu sm">${l}</div>`:''}</div>`};
+const bar=(l,y,n,c)=>`<div style="margin-bottom:8px"><div style="display:flex" class="sm"><span>${l}</span><span style="flex:1"></span><span class="mu">you ${y} · needs ${n}</span></div><div class="ci" style="height:8px;padding:0;margin-top:3px;position:relative"><div style="width:${y}%;height:8px;border-radius:8px;background:${c}"></div><div style="position:absolute;left:${n}%;top:-3px;width:2px;height:14px;background:#2E3036"></div></div></div>`;
+const tag=(t,b,f)=>`<span class="pl" style="background:${b};color:${f}">${t}</span>`;
+const unl=()=>S.off=='a';
+const str=()=>SEC.reduce((a,s)=>a+(s.d?s.w:0),0);
+const tier=v=>v>=80?['Strong','Product MNCs and top firms','6 to 10 LPA','#97C459','#3B6D11']:v>=50?['Good','Mid-size firms and IT services','4 to 6 LPA','#EF9F27','#854F0B']:['Starter','Startups and smaller firms','2.5 to 4 LPA','#D3D1C7','#5F5E5A'];
+const reqLeft=()=>SEC.filter(s=>s.req&&!s.d).length;
+function hLeft(){const v=str(),t=tier(v),nx=v<80?SEC.filter(s=>!s.d&&!s.req).sort((a,b)=>b.w-a.w)[0]:null;
+return `<div class="g" style="gap:16px;align-content:start">
+<div><div class="mu sm">Monday, 28 September</div><div style="font-size:22px" class="h">Good morning, Riya</div></div>
+<div class="cl" style="padding:18px"><div class="mu sm">Profile strength</div>
+<div style="display:flex;align-items:baseline;gap:8px;margin:2px 0 10px"><span style="font-size:28px" class="h">${v}</span><span class="h" style="color:${t[4]}">${t[0]}</span></div>
+<div class="ci" style="height:8px;padding:0"><div style="width:${v}%;height:8px;border-radius:8px;background:${t[3]}"></div></div>
+<div style="display:flex;justify-content:space-between;margin-top:6px" class="sm mu"><span>Starter</span><span>Good</span><span>Strong</span></div>
+<div style="margin-top:14px;padding-top:12px;border-top:0.5px solid #D2D4D9"><div class="mu sm">Sera will match you with</div><div class="h">${t[1]}</div><div class="mu sm">Typical offers ${t[2]}</div></div>
+${nx?`<div class="sm lk" style="margin-top:10px" onclick="S.open='${nx.k}';show()">Add ${nx.n.toLowerCase()} to grow this →</div>`:''}</div>
+<div class="cl" style="padding:14px 16px;display:flex;align-items:center;gap:12px"><i class="ti ti-folder" style="font-size:22px;color:#3B6D11"></i><div style="flex:1;min-width:0"><div class="h sm">riya_kulkarni_cv.pdf</div><div class="mu sm">Sera read this for you</div></div><button class="sb q sm">Replace</button></div></div>`}
+function hList(){const r=reqLeft();const rows=a=>a.map(s=>`<div class="row" onclick="S.open='${s.k}';show()"><i class="ti ti-${s.i}" style="font-size:18px;color:#7A7D85"></i><div style="flex:1;min-width:0"><div>${s.n}</div><div class="mu sm">${s.s}</div></div>${s.d?'<i class="ti ti-circle-check" style="color:#639922;font-size:18px"></i>':s.req?'<span class="sm" style="color:#854F0B">To do</span>':'<span class="sm mu">Add</span>'}<i class="ti ti-chevron-right mu"></i></div>`).join('');
+return `<div class="g" style="gap:14px;align-content:start">
+<div class="mu sm" style="padding-left:4px">Needed to start</div><div class="cl" style="padding:2px 0">${rows(SEC.filter(s=>s.req))}</div>
+<div class="mu sm" style="padding-left:4px">Optional · each one lifts your strength</div><div class="cl" style="padding:2px 0">${rows(SEC.filter(s=>!s.req))}</div>
+<div style="display:flex;align-items:center;gap:10px;padding:4px;flex-wrap:wrap"><div style="flex:1" class="sm mu">${r?`${r} step left before your interview`:'You are ready for your interview'}</div>
+<button class="sb ${unl()?'':'off'}" onclick="${unl()?'S.cv=1':'S.cvm=1'};show()"><i class="ti ti-${unl()?'printer':'lock'}"></i> Print CV</button>
+<button class="sb ${r?'off':'pr'}" onclick="go('interview')">Start interview</button></div>
+${!unl()&&S.cvm?`<div class="ci sm" style="padding:10px">Print CV unlocks when you finish every round and accept an offer. <span class="lk" onclick="S.off='a';S.cvm=0;S.cv=1;show()">Demo: preview unlocked</span></div>`:''}</div>`}
+function hSheet(){const s=SEC.find(x=>x.k==S.open);
+return `<div class="cl" style="padding:20px;align-self:start"><button class="sb q" style="padding:0 0 12px" onclick="S.open=null;show()"><i class="ti ti-chevron-left"></i> Profile</button>
+<div style="font-size:18px" class="h">${s.n}</div><div class="mu sm" style="margin-bottom:16px">${s.req?'Sera needs this to set up your interview.':'Leave it blank if it does not apply to you. Sera adjusts company matches either way.'}</div>
+<div class="g" style="gap:14px">${s.f.map(f=>`<div><div style="display:flex;margin-bottom:5px" class="sm"><span>${f[0]}</span><span style="flex:1"></span>${f[2]||s.req?'':'<span class="mu">Optional</span>'}</div><input ${f[1]?`value="${f[1]}"`:`placeholder="${f[3]}"`}></div>`).join('')}</div>
+<div class="mu sm" style="margin-top:12px"><i class="ti ti-sparkles" style="color:#3B6D11"></i> Filled answers came from your CV. Edit anything.</div>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">${s.req?'':`<button class="sb q" onclick="S.open=null;show()">Skip for now</button>`}<button class="sb pr" onclick="save('${s.k}')">Save</button></div></div>`}
+function save(k){const s=SEC.find(x=>x.k==k);s.d=1;if(k=='pref')s.s='Software engineer · Pune · 5 LPA';if(k=='pro')s.s='Campus canteen ordering app';S.open=null;show()}
+function cvPrev(){return `<div class="cl" style="padding:14px"><div style="display:flex;align-items:center;margin-bottom:10px"><span class="h">Your CV · standard A4 template</span><span style="flex:1"></span><button class="sb" onclick="S.cv=0;show()">Close</button></div>
+<div style="background:#FBFBFC;border-radius:6px;padding:18px 20px;max-width:440px;margin:0 auto;box-shadow:4px 4px 12px #C4C6CC">
+<div style="font-size:16px" class="h">RIYA KULKARNI</div><div class="sm mu">Software engineer · Pune · riya.k@email.com · +91 98220 00000</div>
+${[['Summary','Computer science graduate with backend internship experience in Node.js and SQL.'],['Education','BE computer science, MIT College of Engineering, Pune · 2026 · CGPA 8.1'],['Experience','Backend intern, Brightpath Softech · Jan to Mar 2026'],['Projects','Campus canteen ordering app · Node.js, React, MySQL · 1,200 users'],['Skills','Java, Node.js, SQL, React, Git, Docker'],['Arena readiness','Verified by Sera Interview Arena · score 74 · offer level']].map(x=>`<div style="margin-top:9px;border-top:0.5px solid #D3D1C7;padding-top:5px"><div class="sm h" style="letter-spacing:1px;color:#0C447C">${x[0].toUpperCase()}</div><div class="sm">${x[1]}</div></div>`).join('')}</div>
+<div style="display:flex;justify-content:center;gap:8px;margin-top:12px"><button class="sb">Change template</button><button class="sb pr"><i class="ti ti-printer"></i> Download PDF</button></div></div>`}
+function home(){return `<div class="g" style="grid-template-columns:250px minmax(0,1fr);gap:22px">${hLeft()}${S.cv?cvPrev():S.open?hSheet():hList()}</div>`}
+const locked=k=>k=='ceo'&&!S.ceo;
+function panel(){return `<div class="g" style="align-content:start"><div class="cl" style="padding:12px"><div class="h">Round reports</div><div class="mu sm" style="margin-bottom:8px">Syncs live with your interview</div>
+${Object.keys(R).map(k=>{const r=R[k],c=C[k];return `<div class="${S.r==k?'ci':''}" style="padding:9px;margin-bottom:6px;cursor:pointer;border-radius:14px" onclick="pick('${k}',true)">
+<div style="display:flex;align-items:center;gap:8px"><div style="width:14px;height:14px;border-radius:50%;background:${c[0]}"></div><span class="h" style="flex:1">${r.n}</span>${locked(k)?'<i class="ti ti-lock mu"></i>':`<span class="sm" style="color:${c[1]}">${r.pc}%</span>`}</div>
+<div class="ci" style="height:6px;padding:0;margin:6px 0"><div style="width:${r.pc}%;height:6px;border-radius:6px;background:${c[0]}"></div></div>
+<div class="sm mu">${locked(k)?'Needs average 65':r.s==null?'Not started':'Score '+r.s+' · '+r.v}</div></div>`}).join('')}</div>
+<div class="cl" style="padding:12px"><div class="h" style="margin-bottom:6px">Your attempts</div>
+<div class="sm" style="display:flex"><span>Retry if you fail a round</span><span style="flex:1"></span><span>${S.rt.fn?'0':'1'} left</span></div>
+<div class="sm" style="display:flex"><span>Resume if disconnected</span><span style="flex:1"></span><span>${S.dc[S.r]>=2?'0':'1'} left</span></div>
+<div class="sm" style="display:flex"><span>Full restart</span><span style="flex:1"></span><span class="mu">institute</span></div></div></div>`}
+function companies(){const cs=[['Northwind Systems','Product MNC · Bengaluru','SDE fresher · 4.5 to 6 LPA',82,['Java','DSA','REST APIs']],['Kestrel Labs','Series B startup · Pune','Backend engineer · 5 to 7 LPA',76,['Node.js','SQL','Ownership']],['Meridian Power','Central PSU · Delhi','Graduate engineer trainee',64,['Aptitude','Networks','Protocol']]];
+return `<div class="cl" style="padding:14px"><div class="h" style="font-size:14px">Sera found three openings for your profile</div><div class="mu sm" style="margin-bottom:10px">Matched to your profile strength. Sample companies, AI-generated from public sources.</div>
+<div class="g" style="grid-template-columns:repeat(3,minmax(0,1fr))">${cs.map((c,i)=>`<div class="${S.co==i?'ci':'cl'}" style="padding:12px;cursor:pointer;${S.co==i?'outline:2px solid #97C459':''}" onclick="S.co=${i};show()">
+<div class="h">${c[0]}</div><div class="mu sm">${c[1]}</div><div class="sm" style="margin:6px 0">${c[2]}</div><div style="display:flex;gap:4px;flex-wrap:wrap">${c[4].map(t=>`<span class="pl ci">${t}</span>`).join('')}</div>
+<div style="display:flex;margin-top:8px"><span class="sm" style="color:#3B6D11">${c[3]}% match</span><span style="flex:1"></span><span class="sm mu">View JD</span></div></div>`).join('')}</div>
+<div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="sb on" onclick="S.st.scr=1;show()">Start screening with Sera</button></div></div>`}
+function live(k){const r=R[k],c=C[k],d=S.dc[k]||0;let mid;
+if(d==1)mid=`<div class="ci" style="padding:16px;text-align:center;margin:16px 0"><i class="ti ti-wifi-off" style="font-size:24px;color:#854F0B"></i><div class="h" style="margin-top:6px">Connection lost at 03:12</div><div class="mu sm">Your answers so far are saved. You can resume this round once.</div><button class="sb on" style="margin-top:10px" onclick="S.dc.${k}=2;show()">Resume round</button></div>`;
+else if(d==3)mid=`<div class="ci" style="padding:16px;text-align:center;margin:16px 0"><i class="ti ti-alert-triangle" style="font-size:24px;color:#A32D2D"></i><div class="h" style="margin-top:6px">Round ended</div><div class="mu sm">You have used your one resume. This round is marked incomplete. Your institute can approve a full restart after you finish.</div><button class="sb" style="margin-top:10px" onclick="S.st.${k}=${r.st.length-1};show()">See what was recorded</button></div>`;
+else mid=`<div style="display:flex;justify-content:center;padding:20px 0 8px"><div class="ci" style="width:150px;height:150px;border-radius:50%;display:flex;align-items:center;justify-content:center"><div style="width:104px;height:104px;border-radius:50%;background:${c[0]};box-shadow:inset -10px -10px 20px rgba(0,0,0,.12),inset 8px 8px 16px rgba(255,255,255,.45)"></div></div></div>
+<div style="text-align:center;font-size:22px" class="h">${r.t} <span class="mu" style="font-size:12px">/ ${r.tot}</span></div>
+<div style="text-align:center;margin-top:6px"><span class="pl cl" style="color:#3B6D11"><i class="ti ti-microphone"></i>Your turn · 0:24 left</span></div>
+<div style="display:flex;justify-content:center;gap:10px;margin-top:14px"><button class="sb"><i class="ti ti-microphone-off"></i></button><button class="sb" style="color:#A32D2D" onclick="S.st.${k}=${r.st.length-1};show()">End round</button></div>`;
+return `<div class="cl" style="padding:14px"><div style="display:flex;align-items:center;gap:8px"><div style="width:30px;height:30px;border-radius:50%;background:${c[0]};display:flex;align-items:center;justify-content:center;color:${c[1]}">${r.p.split(' ').map(w=>w[0]).join('').slice(0,2)}</div><div><div class="h">${r.p}</div><div class="mu sm">${r.ro} · Northwind Systems</div></div><span style="flex:1"></span>${S.rt[k]?tag('Retry attempt','#FAEEDA','#633806'):''}${d==2?tag('Resumed · no resumes left','#FAEEDA','#633806'):`<span class="pl ci" style="color:#3B6D11"><i class="ti ti-wifi"></i>Good</span>`}</div>${mid}
+<div class="mu sm" style="text-align:center;margin-top:10px">Your report builds in the left panel as you talk · <span class="lk" onclick="S.dc.${k}=${d==0?1:d==2?3:d};show()">Demo: simulate disconnect</span></div></div>`}
+function apt(){return `<div class="cl" style="padding:14px"><div style="display:flex;align-items:center"><span class="h" style="font-size:14px">Aptitude · based on your CV</span><span style="flex:1"></span><span class="pl ci"><i class="ti ti-clock"></i>11:42 left</span></div><div class="mu sm">8 multiple choice and 2 written. The interview starts after you submit.</div>
+<div style="display:flex;gap:6px;margin:10px 0;flex-wrap:wrap">${[1,2,3,4,5,6,7,8,9,10].map(i=>`<span class="${i==4?'ci':'cl'}" style="width:26px;height:26px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:11px;${i<4?'color:#3B6D11':''}">${i>8?'W'+(i-8):i}</span>`).join('')}</div>
+<div class="ci" style="padding:12px"><div class="mu sm">Question 4 of 8 · SQL</div><div class="h" style="margin:4px 0 8px">Which join returns every row from the left table, even without a match?</div>
+${['INNER JOIN','LEFT JOIN','CROSS JOIN','SELF JOIN'].map((o,i)=>`<div class="${S.opt.q4==i?'ci':'cl'}" style="padding:8px 10px;margin-bottom:6px;cursor:pointer;border-radius:12px" onclick="S.opt.q4=${i};show()">${String.fromCharCode(65+i)}. ${o}</div>`).join('')}</div>
+<div class="ci" style="padding:12px;margin-top:10px"><div class="mu sm">Written 1 of 2 · your project</div><div class="h" style="margin:4px 0 6px">How would you handle 500 canteen orders arriving in one minute?</div><textarea rows="2" placeholder="I would queue the orders..."></textarea></div>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="sb">Previous</button><button class="sb on" onclick="S.st.fn=1;show()">Submit and start interview</button></div></div>`}
+function result(k){const r=R[k],c=C[k],ok=r.v=='Pass';const m={scr:[['Communication',68,60],['Role awareness',74,65],['Confidence',70,60]],hr:[['Culture fit',74,60],['CV consistency',70,65],['Salary alignment',48,60]],fn:[['Aptitude',62,60],['SQL depth',44,65],['Problem solving',60,60]]}[k];
+return `<div class="g"><div class="cl" style="padding:14px;display:flex;gap:14px;align-items:center">${ring(r.s,c[0],'',86)}<div style="flex:1"><div class="mu sm">${r.n} · Northwind Systems</div><div class="h" style="font-size:16px">${ok?'Passed':'Needs improvement'}</div>${tag(ok?'Next round open':'Pass bar is 60',ok?'#EAF3DE':'#FAEEDA',ok?'#27500A':'#633806')}</div></div>
+<div class="g" style="grid-template-columns:1fr 1fr"><div class="cl" style="padding:12px"><div class="h" style="margin-bottom:8px">You vs company need</div>${m.map(x=>bar(x[0],x[1],x[2],c[0])).join('')}</div>
+<div class="cl" style="padding:12px"><div class="h" style="margin-bottom:6px">Strengths</div><div class="sm">Explained your canteen app clearly, with real numbers.</div><div class="h" style="margin:8px 0 6px">Weak areas</div><div class="sm">${k=='fn'?'Mixed up LEFT and INNER join at 03:12.':k=='hr'?'Asked for 9 LPA; this profile offers 4.5 to 6.':'Closing answer rushed, no clear outcome.'}</div><div class="h" style="margin:8px 0 6px">Area of expertise</div><div class="sm">Backend APIs, fits 3 of 4 JD needs.</div></div></div>
+<div class="ci" style="padding:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><i class="ti ti-send" style="color:${c[1]};font-size:16px"></i><span class="sm" style="flex:1;min-width:160px">${r.fw}</span>
+${ok?'':(S.rt[k]?`<button class="sb off">No retries left</button>`:`<button class="sb" onclick="S.rt.${k}=1;S.st.${k}=0;show()">Retry round · 1 left</button>`)}<button class="sb on" onclick="next('${k}')">${k=='fn'?'Continue':'Next round'}</button></div></div>`}
+function ceoLock(){return `<div class="cl" style="padding:18px"><div style="display:flex;gap:14px;align-items:center"><div class="ci" style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;color:#0C447C"><i class="ti ti-lock"></i></div><div><div class="h" style="font-size:16px">CEO round is locked</div><div class="mu">It opens when your average across the first three rounds reaches 65. A retry replaces that round's score.</div></div></div>
+<div style="margin:14px 0">${bar('Your average',64,65,'#B5D4F4')}</div>
+<div class="g" style="grid-template-columns:repeat(3,1fr)">${[['scr',71],['hr',64],['fn',58]].map(x=>`<div class="ci" style="padding:10px"><div class="mu sm">${R[x[0]].n}</div><div class="h">${x[1]}</div></div>`).join('')}</div>
+<div class="h" style="margin:14px 0 6px">What you can do</div><div style="display:flex;gap:8px;flex-wrap:wrap">${S.rt.fn?`<button class="sb off">Functional retry used</button>`:`<button class="sb" onclick="S.r='fn';S.rt.fn=1;S.st.fn=0;show()">Retry functional round · 1 left</button>`}<button class="sb on" onclick="go('reports')">Finish and see full report</button></div>
+<div class="sm" style="margin-top:10px"><span class="lk" onclick="S.ceo=1;show()">Demo: preview as threshold met</span></div></div>`}
+function offer(){return `<div class="cl" style="padding:18px;text-align:center"><div class="ci" style="width:60px;height:60px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:26px;color:#0C447C"><i class="ti ti-award"></i></div>
+<div class="mu sm" style="margin-top:10px">Northwind Systems · simulated offer</div><div class="h" style="font-size:18px">Congratulations, Riya</div><div class="mu">The CEO would like to offer you the role</div>
+<div class="g" style="grid-template-columns:repeat(3,1fr);margin:14px 0">${[['Role','Software engineer'],['CTC','5.5 LPA'],['Joining','June 2026']].map(x=>`<div class="ci" style="padding:10px"><div class="mu sm">${x[0]}</div><div class="h">${x[1]}</div></div>`).join('')}</div>
+${S.off?`<div class="ci" style="padding:10px">${S.off=='a'?'Offer accepted. Print CV is now open on Home, and your full report is in Reports.':'Offer declined. Your full report is in Reports.'}</div>`:`<div style="display:flex;gap:10px;justify-content:center"><button class="sb" onclick="S.off='d';show()">Decline</button><button class="sb on" onclick="S.off='a';show()">Accept offer</button></div>`}</div>`}
+function interview(){const k=S.r,r=R[k],s=S.st[k],n=r.st[s];let body=locked(k)?ceoLock():n=='Choose company'?companies():n=='Interview'?live(k):n=='Aptitude'?apt():n=='Offer'?offer():result(k);
+return `<div class="g" style="grid-template-columns:210px minmax(0,1fr)">${panel()}<div class="g" style="align-content:start">
+<div style="display:flex;gap:6px;flex-wrap:wrap">${Object.keys(R).map(x=>`<button class="sb ${x==k?'on':''}" onclick="pick('${x}')">${locked(x)?'<i class="ti ti-lock"></i> ':''}${R[x].n}</button>`).join('')}</div>
+${locked(k)?'':`<div class="ci" style="padding:5px;display:flex;gap:6px;border-radius:14px">${r.st.map((x,i)=>`<button class="sb ${i==s?'on':''}" style="flex:1;font-size:11px" onclick="S.st.${k}=${i};show()">${i+1}. ${x}</button>`).join('')}</div>`}${body}</div></div>`}
+function restart(){const st=[`<div class="mu sm">Available only after you finish the full interview. Your institute must approve it. Your earlier report stays in history.</div><button class="sb on" style="margin-top:8px" onclick="S.rq=1;show()">Request institute approval</button>`,
+`<div class="sm">${tag('Waiting','#FAEEDA','#633806')} Request sent to your placement cell on 28 Sep.</div><div class="sm" style="margin-top:6px"><span class="lk" onclick="S.rq=2;show()">Demo: simulate approval</span></div><button class="sb off" style="margin-top:8px"><i class="ti ti-lock"></i> Restart full session</button>`,
+`<div class="sm">${tag('Approved','#EAF3DE','#27500A')} Your institute approved one full restart.</div><div class="mu sm" style="margin-top:4px">This starts again from Sera screening.</div><button class="sb on" style="margin-top:8px"><i class="ti ti-refresh"></i> Restart full session</button>`][S.rq];
+return `<div class="cl" style="padding:14px"><div class="h" style="margin-bottom:4px">Not happy with this attempt?</div>${st}</div>`}
+function reports(){const f=S.sc=='fail';return `<div style="display:flex;gap:6px;margin-bottom:10px"><span class="mu sm" style="align-self:center">Preview scenario</span><button class="sb ${f?'on':''}" onclick="S.sc='fail';show()">Not cleared</button><button class="sb ${!f?'on':''}" onclick="S.sc='pass';show()">Offer received</button></div>
+<div class="g"><div class="cl" style="padding:16px;display:flex;gap:16px;align-items:center">${ring(f?64:74,f?'#EF9F27':'#97C459','',96)}
+<div style="flex:1"><div class="mu sm">Full interview report · Northwind Systems · software engineer</div><div class="h" style="font-size:18px">${f?'CEO round not unlocked':'Offer received, 5.5 LPA'}</div><div class="mu">${f?'Average 64, one point below 65. Two fixable gaps held you back.':'Strong overall. One area to sharpen before real interviews.'}</div></div><button class="sb"><i class="ti ti-download"></i> PDF</button></div>
+<div class="g" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+<div class="cl" style="padding:14px"><div class="h" style="margin-bottom:10px">Your journey, round by round</div>
+${[['scr','Sera screening',71],['hr','HR BP',64],['fn','Functional',f?58:66],['ceo','CEO round',f?null:78]].map(x=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span class="sm" style="width:92px">${x[1]}</span><div class="ci" style="flex:1;height:10px;padding:0;position:relative">${x[2]!=null?`<div style="width:${x[2]}%;height:10px;border-radius:10px;background:${C[x[0]][0]}"></div>`:''}<div style="position:absolute;left:60%;top:-3px;width:2px;height:16px;background:#2E3036"></div></div><span class="sm" style="width:34px;text-align:right">${x[2]??'<i class="ti ti-lock"></i>'}</span></div>`).join('')}<div class="mu sm">Line marks the pass bar of 60</div></div>
+<div class="cl" style="padding:14px"><div class="h" style="margin-bottom:10px">Skills vs what Northwind needs</div>${bar('Communication',66,60,'#A9C8A0')}${bar('SQL and databases',f?44:62,65,'#EDB3C2')}${bar('Problem solving',60,60,'#F2B25C')}${bar('Salary realism',48,60,'#F0997B')}</div></div>
+<div class="cl" style="padding:14px"><div class="h" style="margin-bottom:10px">${f?'Why you did not clear':'What held your score back'}</div><div class="g" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+${[['Skill gap','#FBEAF0','#72243E','SQL joins','Confused LEFT and INNER join in aptitude Q4 and again live at 03:12.'],['Expectation','#FAECE7','#712B13','Salary ask','Asked 9 LPA; similar fresher roles offer 4.5 to 6 LPA.'],['Communication','#FAEEDA','#633806','Answer structure','Conflict answer ran 1:40 with 11 filler words and no clear result.']].slice(0,f?3:2).map(x=>`<div class="ci" style="padding:11px">${tag(x[0],x[1],x[2])}<div class="h" style="margin:6px 0 3px">${x[3]}</div><div class="sm mu">${x[4]}</div><div class="sm lk" style="margin-top:6px" onclick="go('resources')">See free fix →</div></div>`).join('')}</div></div>
+<div class="g" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div class="cl" style="padding:14px"><div class="h" style="margin-bottom:8px">Your roadmap</div>${[['Now','Practise SQL joins, 20 problems','#A9C8A0'],['Next','STAR method for HR answers','#F2B25C'],['Later','Retry Northwind at intermediate','#B5D4F4']].map(x=>`<div class="ci" style="padding:8px 10px;margin-bottom:6px;display:flex;gap:8px;align-items:center"><div style="width:10px;height:10px;border-radius:50%;background:${x[2]}"></div><span class="mu sm" style="width:36px">${x[0]}</span><span class="sm">${x[1]}</span></div>`).join('')}</div>
+${f?restart():`<div class="cl" style="padding:14px"><div class="h" style="margin-bottom:4px">Your CV is ready to print</div><div class="mu sm">Standard A4 template, provided by your institute.</div><button class="sb on" style="margin-top:8px" onclick="S.off='a';S.cv=1;go('home')"><i class="ti ti-printer"></i> Open Print CV</button></div>`}</div></div>`}
+function resources(){const v=[['SQL joins explained visually','Skill gap','18 min','#EDB3C2'],['20 SQL interview problems','Skill gap','Playlist','#EDB3C2'],['STAR method in 8 minutes','Communication','8 min','#F2B25C'],['Stop saying um and like','Communication','11 min','#F2B25C'],['Fresher salary bands 2026','Expectation','Guide','#F0997B'],['Quant aptitude crash course','Aptitude','Playlist','#A9C8A0']];const g=['All','Skill gap','Communication','Expectation','Aptitude'];
+return `<div class="g"><div style="display:flex;gap:6px;flex-wrap:wrap">${g.map(x=>`<button class="sb ${S.gap==x?'on':''}" onclick="S.gap='${x}';show()">${x}</button>`).join('')}</div>
+<div class="g" style="grid-template-columns:repeat(3,minmax(0,1fr))">${v.filter(x=>S.gap=='All'||x[1]==S.gap).map(x=>`<div class="cl" style="padding:10px"><div class="ci" style="height:84px;display:flex;align-items:center;justify-content:center"><div style="width:36px;height:36px;border-radius:50%;background:${x[3]};display:flex;align-items:center;justify-content:center"><i class="ti ti-player-play"></i></div></div><div class="h" style="margin-top:8px">${x[0]}</div><div class="mu sm">YouTube · ${x[2]} · free</div></div>`).join('')}</div>
+<div class="cl" style="padding:14px"><div class="h" style="margin-bottom:10px">Career path: software engineer</div><div style="display:flex;gap:6px">
+${[['You are here','Fresher SDE','SQL, DSA basics','#A9C8A0'],['1 to 2 years','SDE II','System design','#F2B25C'],['3 to 5 years','Senior engineer','Architecture','#EDB3C2'],['6+ years','Tech lead','Leading teams','#B5D4F4']].map((x,i)=>`${i?'<i class="ti ti-chevron-right mu" style="align-self:center"></i>':''}<div class="ci" style="padding:10px;flex:1"><div style="width:14px;height:14px;border-radius:50%;background:${x[3]};margin-bottom:5px"></div><div class="mu sm">${x[0]}</div><div class="h">${x[1]}</div><div class="sm mu">${x[2]}</div></div>`).join('')}</div></div></div>`}
+const V={home,interview,reports,resources},vw=document.getElementById('view');
+function show(){vw.innerHTML=V[S.t]();document.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t==S.t))}
+function go(t){S.t=t;show()}
+function pick(k,rep){S.r=k;if(rep&&R[k].pc==100)S.st[k]=R[k].st.length-1;show()}
+function next(k){const o=['scr','hr','fn','ceo'];S.r=o[o.indexOf(k)+1];S.st[S.r]=0;show()}
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>go(b.dataset.t));show();
+</script>
+</body>
+</html>

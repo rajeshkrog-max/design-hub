@@ -47,9 +47,13 @@ export const profiles: StudentProfile[] = students.map((student, index) => {
           college: student.institute_id === "inst-bloom" ? "Bloom School of Business" : "Pioneer Institute of Technology",
           grad_year: student.institute_id === "inst-bloom" ? 2027 : 2026,
           cgpa: (6.4 + ((index * 7) % 30) / 10).toFixed(1),
-          class_xii: sparse ? undefined : `${78 + ((index * 5) % 20)}% · CBSE`,
-          class_x: sparse ? undefined : `${80 + ((index * 3) % 18)}% · CBSE`,
-          gap: index % 6 === 5 ? "1 year preparation gap" : undefined,
+          ...(sparse
+            ? {}
+            : {
+                class_xii: `${78 + ((index * 5) % 20)}% · CBSE`,
+                class_x: `${80 + ((index * 3) % 18)}% · CBSE`,
+              }),
+          ...(index % 6 === 5 ? { gap: "1 year preparation gap" } : {}),
         },
     skills: incomplete
       ? null
