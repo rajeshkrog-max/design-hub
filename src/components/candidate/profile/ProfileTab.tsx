@@ -150,7 +150,7 @@ function SectionEditor({ profile, section, onSave, onSkip }: {
   }
 
   if (section === "experience" || section === "projects" || section === "certifications") {
-    const items = (profile[section] as Array<Record<string, string>>) ?? [];
+    const items = (profile[section] as unknown as Array<Record<string, string>>) ?? [];
     const fields: Record<string, string[]> = {
       experience: ["company", "role", "dates", "type", "achievements"],
       projects: ["title", "stack", "role", "impact", "link"],

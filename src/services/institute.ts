@@ -55,13 +55,13 @@ export function getInstituteOverview(user: SessionUser) {
 }
 
 export interface StudentFilters {
-  batch?: string;
-  status?: string;
-  round?: string;
-  verdict?: string;
-  band?: string;
-  weakArea?: string;
-  search?: string;
+  batch?: string | undefined;
+  status?: string | undefined;
+  round?: string | undefined;
+  verdict?: string | undefined;
+  band?: string | undefined;
+  weakArea?: string | undefined;
+  search?: string | undefined;
 }
 
 export function listStudents(user: SessionUser, filters: StudentFilters = {}): StudentDerived[] {

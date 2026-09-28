@@ -1,3 +1,3 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CandidateApp } from "@/components/sera/candidate-app";
+import { CandidateApp } from "@/components/candidate/CandidateApp";
 export const Route=createFileRoute("/candidate")({head:()=>({meta:[{title:"My arena — Sera Interview Arena"},{name:"description",content:"Build your profile, complete interview rounds, and review your readiness."},{property:"og:title",content:"My arena — Sera Interview Arena"},{property:"og:description",content:"Your four-round interview journey and readiness report."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:CandidateApp});
