@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, Building2, Check, KeyRound, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowRight, Building2, Check, KeyRound, Mail, MessageCircle, MessageSquareText, School, ShieldCheck, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SeraMark, Surface } from "@/components/shared";
-import { getStore } from "@/data/mock/store";
+import { Surface } from "@/components/shared";
+import { loginInstitute, requestOtp, verifyOtp, type OtpRequest, type StudentKind } from "@/services/auth";
 import { useSession } from "@/services/session";
-import type { SessionUser } from "@/types/arena";
+import { AuthFrame, Field } from "./shared";
+
+type Role = "student" | "institute";
 
 export function StudentLogin() {
   return <AuthPage defaultRole="student" />;
@@ -14,92 +16,130 @@ export function InstituteLogin() {
   return <AuthPage defaultRole="institute" />;
 }
 
-export function AuthPage({ defaultRole = "student" }: { defaultRole?: "student" | "institute" }) {
-  const [role, setRole] = useState(defaultRole);
+// UI only: no real validation. Any input continues; the stubs in services/auth.ts decide the session.
+export function AuthPage({ defaultRole = "student" }: { defaultRole?: Role }) {
+  const [role, setRole] = useState<Role>(defaultRole);
+  const [kind, setKind] = useState<StudentKind>("institute");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const { signIn } = useSession();
-  const navigate = useNavigate();
+  const [otpFor, setOtpFor] = useState<OtpRequest | null>(null);
   const student = role === "student";
-  const store = getStore();
 
-  // Demo picker: every sign-in picks a seeded identity so tenant isolation is testable.
-  const demoStudents = store.students.filter((s) => s.auth_user_id);
-  const demoStaff = store.institute_users;
-
-  function enterAs(user: SessionUser) {
-    signIn(user);
-    navigate({ to: user.role === "student" ? "/candidate" : "/institute" });
-  }
-
-  const title = mode === "signin" ? (student ? "Welcome back." : "Institute workspace") : student ? "Create your student account." : "Register your institute.";
-  const copy = mode === "signin"
-    ? student ? "Sign in to continue your interview rounds." : "Secure access for placement and career teams."
-    : student ? "You need the institute code shared by your placement cell." : "Set up a workspace for your placement team.";
+  const title = otpFor
+    ? "Enter your code."
+    : !student ? "Institute workspace" : mode === "signin" ? "Welcome back." : "Create your account.";
+  const copy = otpFor
+    ? "We sent a 6-digit code to your WhatsApp."
+    : !student
+      ? "One login for your placement team."
+      : kind === "institute" ? "Use the code your placement cell shared with you." : "Practise on your own, no institute needed.";
 
   return (
     <AuthFrame title={title} copy={copy}>
-      <div className="clay-inset mb-2 grid grid-cols-2 gap-1 rounded-xl p-1">
-        {(["student", "institute"] as const).map((r) => (
-          <button key={r} onClick={() => setRole(r)} className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-medium ${role === r ? "clay-soft text-success" : "text-muted-foreground"}`}>
-            {r === "student" ? <UserRound className="size-4" /> : <Building2 className="size-4" />}
-            {r === "student" ? "Student" : "Institute"}
-          </button>
-        ))}
-      </div>
-      {mode === "signup" &&
-        (student ? (
-          <>
-            <Field label="Institute code" placeholder="PIT-CSE26" icon={KeyRound} />
-            <Field label="Full name" placeholder="Riya Kapoor" icon={UserRound} />
-          </>
-        ) : (
-          <>
-            <Field label="Institute name" placeholder="Pioneer Institute of Technology" icon={Building2} />
-            <Field label="Your name" placeholder="Ananya Desai" icon={UserRound} />
-          </>
-        ))}
-      <Field label={student ? "Email" : "Work email"} placeholder={student ? "you@college.edu" : "placement@institute.edu"} icon={Mail} />
-      <Field label="Password" placeholder="••••••••" icon={KeyRound} type="password" />
-      {mode === "signin" && <button className="mt-3 text-xs text-muted-foreground">Forgot password?</button>}
-
-      <div className="mt-6">
-        <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-          Demo sign-in — pick an identity
-        </p>
-        <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
-          {student
-            ? demoStudents.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => enterAs({ role: "student", auth_user_id: s.auth_user_id!, student_id: s.id, institute_id: s.institute_id })}
-                  className="flex w-full items-center justify-between rounded-xl bg-secondary/50 px-4 py-2.5 text-left text-sm hover:bg-secondary"
-                >
-                  <span>{s.name}</span>
-                  <span className="text-xs text-muted-foreground">{store.institutes.find((i) => i.id === s.institute_id)?.name.split(" ")[0]}</span>
+      {otpFor ? (
+        <OtpForm request={otpFor} isSignup={mode === "signup"} onBack={() => setOtpFor(null)} />
+      ) : (
+        <>
+          <div className="clay-inset mb-2 grid grid-cols-2 gap-1 rounded-xl p-1">
+            {(["student", "institute"] as const).map((r) => (
+              <button key={r} type="button" onClick={() => setRole(r)} className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-medium ${role === r ? "clay-soft text-success" : "text-muted-foreground"}`}>
+                {r === "student" ? <UserRound className="size-4" /> : <Building2 className="size-4" />}
+                {r === "student" ? "Student" : "Institute"}
+              </button>
+            ))}
+          </div>
+          {student ? (
+            <>
+              <div className="mt-3 flex justify-center gap-5 text-xs">
+                {(["institute", "independent"] as const).map((k) => (
+                  <button key={k} type="button" onClick={() => setKind(k)} className={kind === k ? "font-medium text-success" : "text-muted-foreground"}>
+                    {k === "institute" ? "Through my institute" : "On my own"}
+                  </button>
+                ))}
+              </div>
+              <StudentForm key={`${kind}-${mode}`} kind={kind} isSignup={mode === "signup"} onSent={setOtpFor} />
+              <p className="mt-5 text-center text-xs text-muted-foreground">
+                {mode === "signin" ? "New here? " : "Already have an account? "}
+                <button type="button" onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="font-medium text-success">
+                  {mode === "signin" ? "Sign up" : "Sign in"}
                 </button>
-              ))
-            : demoStaff.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => enterAs({ role: "institute", auth_user_id: u.auth_user_id, institute_user_id: u.id, institute_id: u.institute_id })}
-                  className="flex w-full items-center justify-between rounded-xl bg-secondary/50 px-4 py-2.5 text-left text-sm hover:bg-secondary"
-                >
-                  <span>{u.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {store.institutes.find((i) => i.id === u.institute_id)?.name.split(" ")[0]} · {u.role}
-                  </span>
-                </button>
-              ))}
-        </div>
-      </div>
-
-      <p className="mt-5 text-center text-xs text-muted-foreground">
-        {mode === "signin" ? "New here? " : "Already have an account? "}
-        <button onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="font-medium text-success">
-          {mode === "signin" ? (student ? "Sign up with institute code" : "Register your institute") : "Sign in"}
-        </button>
-      </p>
+              </p>
+            </>
+          ) : (
+            <InstituteForm />
+          )}
+        </>
+      )}
     </AuthFrame>
+  );
+}
+
+function StudentForm({ kind, isSignup, onSent }: { kind: StudentKind; isSignup: boolean; onSent: (request: OtpRequest) => void }) {
+  const [form, setForm] = useState({ institute_code: "", email: "", whatsapp: "", name: "" });
+  const set = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    const request: OtpRequest = kind === "institute"
+      ? { kind, institute_code: form.institute_code, whatsapp: form.whatsapp, ...(isSignup ? { name: form.name, email: form.email } : {}) }
+      : { kind, email: form.email, whatsapp: form.whatsapp, ...(isSignup ? { name: form.name } : {}) };
+    requestOtp(request);
+    onSent(request);
+  }
+
+  return (
+    <form onSubmit={submit}>
+      {isSignup && <Field label="Full name" placeholder="Riya Kulkarni" icon={UserRound} value={form.name} onChange={set("name")} autoComplete="name" />}
+      {kind === "institute" && <Field label="Institute code" placeholder="PIT-CSE26" icon={School} value={form.institute_code} onChange={set("institute_code")} />}
+      {(kind === "independent" || isSignup) && (
+        <Field label="Email" placeholder="you@example.com" icon={Mail} type="email" value={form.email} onChange={set("email")} autoComplete="email" />
+      )}
+      <Field label="WhatsApp number" placeholder="+91 98765 43210" icon={MessageCircle} type="tel" value={form.whatsapp} onChange={set("whatsapp")} autoComplete="tel" inputMode="tel" />
+      <Button type="submit" className="mt-6 h-12 w-full">Send code <ArrowRight /></Button>
+    </form>
+  );
+}
+
+function OtpForm({ request, isSignup, onBack }: { request: OtpRequest; isSignup: boolean; onBack: () => void }) {
+  const [code, setCode] = useState("");
+  const { signIn } = useSession();
+  const navigate = useNavigate();
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    signIn(verifyOtp(request, code));
+    // independents choose a plan right after sign-up
+    navigate({ to: isSignup && request.kind === "independent" ? "/plans" : "/candidate" });
+  }
+
+  return (
+    <form onSubmit={submit}>
+      <Field label="Code" placeholder="6-digit code" icon={MessageSquareText} value={code} onChange={(v) => setCode(v.replace(/\D/g, "").slice(0, 6))} autoComplete="one-time-code" inputMode="numeric" />
+      <Button type="submit" className="mt-6 h-12 w-full" disabled={code.length !== 6}>Verify <ArrowRight /></Button>
+      <p className="mt-5 text-center text-xs text-muted-foreground">
+        Wrong number? <button type="button" onClick={onBack} className="font-medium text-success">Go back</button>
+      </p>
+    </form>
+  );
+}
+
+function InstituteForm() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const { signIn } = useSession();
+  const navigate = useNavigate();
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    signIn(loginInstitute(email, password));
+    navigate({ to: "/institute" });
+  }
+
+  return (
+    <form onSubmit={submit}>
+      <Field label="Institute email" placeholder="placement@institute.edu" icon={Mail} type="email" value={email} onChange={setEmail} autoComplete="username" />
+      <Field label="Password" placeholder="••••••••" icon={KeyRound} type="password" value={password} onChange={setPassword} autoComplete="current-password" />
+      <Button type="submit" className="mt-6 h-12 w-full">Sign in <ArrowRight /></Button>
+    </form>
   );
 }
 
@@ -124,30 +164,5 @@ export function AcceptInvite() {
         <Link to="/student-login">Accept invite <ArrowRight /></Link>
       </Button>
     </AuthFrame>
-  );
-}
-
-function AuthFrame({ title, copy, children }: { title: string; copy: string; children: React.ReactNode }) {
-  return (
-    <main className="grid min-h-screen place-items-center px-5 py-12">
-      <div className="w-full max-w-md">
-        <Link to="/" className="mb-8 inline-flex items-center gap-2 text-xs text-muted-foreground"><ArrowLeft className="size-3" />Back</Link>
-        <div className="mb-8"><SeraMark /><h1 className="mt-10 text-3xl font-medium">{title}</h1><p className="mt-2 text-sm text-muted-foreground">{copy}</p></div>
-        <Surface className="p-6 sm:p-8">{children}</Surface>
-        <p className="mt-6 text-center text-[11px] text-muted-foreground">By continuing, you agree to the institute's Arena participation policy.</p>
-      </div>
-    </main>
-  );
-}
-
-function Field({ label, placeholder, icon: Icon, type = "text" }: { label: string; placeholder: string; icon: typeof UserRound; type?: string }) {
-  return (
-    <label className="mt-4 block text-xs font-medium">
-      {label}
-      <span className="clay-inset mt-2 flex items-center gap-3 rounded-xl px-4">
-        <Icon className="size-4 text-muted-foreground" />
-        <input type={type} placeholder={placeholder} className="h-12 w-full bg-transparent text-sm outline-none" />
-      </span>
-    </label>
   );
 }

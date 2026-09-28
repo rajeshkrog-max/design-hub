@@ -4,7 +4,8 @@ import { Briefcase, FileText, Home, Library, LogOut, Mic2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Pill, SeraMark } from "@/components/shared";
 import { useSession } from "@/services/session";
-import { getMyProfile } from "@/services/student";
+import { PLANS } from "@/lib/rules";
+import { getMyAccount, getMyProfile } from "@/services/student";
 import { HomeTab } from "./home/HomeTab";
 import { ProfileTab } from "./profile/ProfileTab";
 import { InterviewTab } from "./interview/InterviewTab";
@@ -37,7 +38,8 @@ export function CandidateApp() {
     );
   }
   const profile = getMyProfile(user);
-  const name = profile?.personal?.name ?? "Student";
+  const account = getMyAccount(user);
+  const name = profile?.personal?.name ?? account.student.name;
 
   return (
     <main className="min-h-screen">
@@ -82,6 +84,7 @@ export function CandidateApp() {
         </nav>
       </header>
       <div className="mx-auto max-w-6xl px-5 py-8">
+        <AccountStrip account={account} />
         {tab === "home" && <HomeTab user={user} goTo={setTab} />}
         {tab === "profile" && <ProfileTab user={user} />}
         {tab === "interview" && <InterviewTab user={user} />}
@@ -89,5 +92,19 @@ export function CandidateApp() {
         {tab === "resources" && <ResourcesTab user={user} />}
       </div>
     </main>
+  );
+}
+
+/** Institute students see their credits (never prices). Independents see their plan name. */
+function AccountStrip({ account }: { account: ReturnType<typeof getMyAccount> }) {
+  const { student, credits_left } = account;
+  return (
+    <div className="mb-6 flex flex-wrap items-center gap-2">
+      {student.account_type === "institute" ? (
+        <Pill tone="sage">Interview credits: {credits_left} of {student.credits_total}</Pill>
+      ) : (
+        <Pill tone="blue">{student.plan ? `${PLANS[student.plan].label} plan` : "No plan yet"}</Pill>
+      )}
+    </div>
   );
 }

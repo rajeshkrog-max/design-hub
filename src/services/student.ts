@@ -1,8 +1,9 @@
 import { getStore, nextId, persist } from "@/data/mock/store";
 import { aptitudeQuestions } from "@/data/mock/aptitude";
 import {
-  ROUND_ORDER, canRequestRestart, canResume, canRetry, ceoUnlocked, currentAverage,
-  currentRound, profileStrength, profileTier, reportsUnlocked,
+  INDEPENDENT_THRESHOLDS, ROUND_ORDER, canRequestRestart, canResume, canRetry, ceoUnlocked,
+  creditsLeft, currentAverage, currentRound, profileStrength, profileTier, reportsUnlocked,
+  type Thresholds,
 } from "@/lib/rules";
 import type {
   AptitudeAttempt, CompanyProfile, InterviewSession, Offer, ProfileSectionKey,
@@ -15,6 +16,24 @@ function requireStudent(user: SessionUser): Student {
   if (!student) throw new Error("Student not found");
   if (student.institute_id !== user.institute_id) throw new Error("You don't have access");
   return student;
+}
+
+/** Institute students are judged by their institute's thresholds, independents by the defaults. */
+function thresholdsFor(institute_id: string | null): Thresholds {
+  return getStore().institutes.find((i) => i.id === institute_id) ?? INDEPENDENT_THRESHOLDS;
+}
+
+/** A session is visible to a student only when it is theirs (never matched on institute_id alone). */
+function ownSession(student: Student, sessionId: string): InterviewSession {
+  const session = getStore().interview_sessions.find((s) => s.id === sessionId);
+  if (!session || session.student_id !== student.id) throw new Error("You don't have access");
+  return session;
+}
+
+/** Header data: credits for institute students, plan name for independents. */
+export function getMyAccount(user: SessionUser): { student: Student; credits_left: number } {
+  const student = requireStudent(user);
+  return { student, credits_left: creditsLeft(student) };
 }
 
 export function logAudit(
@@ -96,7 +115,6 @@ export function getMySession(user: SessionUser): {
       .filter((s) => s.student_id === student.id)
       .sort((a, b) => b.attempt_no - a.attempt_no)[0] ?? null;
   if (!session) return { session: null, rounds: [], offer: null, company: null };
-  if (session.institute_id !== user.institute_id) throw new Error("You don't have access");
   const rounds = store.session_rounds.filter((r) => r.session_id === session.id);
   const offer = store.offers.find((o) => o.session_id === session.id) ?? null;
   const company = store.company_profiles.find((c) => c.id === session.company_profile_id) ?? null;
@@ -192,7 +210,8 @@ export function startRound(user: SessionUser, round: RoundKey): SessionRound {
 function findRound(user: SessionUser, roundId: string): SessionRound {
   const student = requireStudent(user);
   const round = getStore().session_rounds.find((r) => r.id === roundId);
-  if (!round || round.institute_id !== student.institute_id) throw new Error("You don't have access");
+  if (!round) throw new Error("You don't have access");
+  ownSession(student, round.session_id);
   return round;
 }
 
@@ -219,11 +238,10 @@ export function endRound(user: SessionUser, roundId: string, score?: number): Se
   round.notes_for_next = "Probe depth on the weak areas noted above.";
 
   const session = store.interview_sessions.find((s) => s.id === round.session_id)!;
-  const institute = store.institutes.find((i) => i.id === session.institute_id)!;
   const rounds = store.session_rounds.filter((r) => r.session_id === session.id);
   const avg = currentAverage(rounds);
   session.average_score = avg;
-  session.ceo_unlocked = ceoUnlocked(rounds, institute);
+  session.ceo_unlocked = ceoUnlocked(rounds, thresholdsFor(session.institute_id));
   if (round.round === "ceo") {
     session.status = "completed";
     session.completed_at = new Date().toISOString();
@@ -318,7 +336,8 @@ export function decideOffer(user: SessionUser, offerId: string, decision: "accep
   const student = requireStudent(user);
   const store = getStore();
   const offer = store.offers.find((o) => o.id === offerId);
-  if (!offer || offer.institute_id !== student.institute_id) throw new Error("You don't have access");
+  if (!offer) throw new Error("You don't have access");
+  ownSession(student, offer.session_id);
   offer.decision = decision;
   offer.decided_at = new Date().toISOString();
   persist();
@@ -327,13 +346,16 @@ export function decideOffer(user: SessionUser, offerId: string, decision: "accep
 
 export function requestRestart(user: SessionUser, reason: string) {
   const student = requireStudent(user);
+  if (!student.institute_id) {
+    throw new Error("Restarts are approved by an institute. Start a new attempt with a credit instead.");
+  }
   const store = getStore();
   const session = store.interview_sessions
     .filter((s) => s.student_id === student.id)
     .sort((a, b) => b.attempt_no - a.attempt_no)[0];
   if (!session) throw new Error("No session to restart");
   const rounds = store.session_rounds.filter((r) => r.session_id === session.id);
-  const institute = store.institutes.find((i) => i.id === session.institute_id)!;
+  const institute = thresholdsFor(session.institute_id);
   const pending = store.restart_requests.some(
     (r) => r.student_id === student.id && r.status === "pending",
   );
@@ -362,8 +384,7 @@ export function getMyReport(user: SessionUser) {
     .sort((a, b) => b.attempt_no - a.attempt_no)[0];
   if (!session) return null;
   const rounds = store.session_rounds.filter((r) => r.session_id === session.id);
-  const institute = store.institutes.find((i) => i.id === session.institute_id)!;
-  if (!reportsUnlocked(session, rounds, institute)) return null;
+  if (!reportsUnlocked(session, rounds, thresholdsFor(session.institute_id))) return null;
   logAudit(user, "view_report", "session", session.id);
   return {
     session,

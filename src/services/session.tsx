@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import type { SessionUser } from "@/types/arena";
+import { logout } from "./auth";
 
 const KEY = "sera-session-v1";
 
@@ -30,6 +31,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setUser(next);
       },
       signOut: () => {
+        logout();
         localStorage.removeItem(KEY);
         setUser(null);
       },

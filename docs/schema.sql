@@ -20,18 +20,26 @@ create table batches (
   name text not null, program text, year int,
   invite_code text unique, created_at timestamptz default now());
 
+-- institute students sign in with institute code + WhatsApp OTP;
+-- independent candidates with email + WhatsApp OTP and have no institute, batch or credits from an institute
 create table students (
   id uuid primary key default gen_random_uuid(),
-  institute_id uuid not null references institutes(id) on delete cascade,
+  account_type text not null default 'institute' check (account_type in ('institute','independent')),
+  institute_id uuid references institutes(id) on delete cascade,
   batch_id uuid references batches(id),
-  auth_user_id uuid unique, email text not null, name text,
+  auth_user_id uuid unique, email text, phone text unique, name text,
   photo_url text, status text default 'invited' check (status in ('invited','active','archived')),
+  credits_total int not null default 0, credits_used int not null default 0,
+  plan text check (plan in ('standard','pro')),
   consent_at timestamptz, created_at timestamptz default now(),
-  unique (institute_id, email));
+  unique (institute_id, email),
+  check ((account_type = 'institute') = (institute_id is not null)),
+  check (account_type = 'independent' or plan is null));
 
+-- institute_id on student-owned rows is null for independent candidates
 create table student_profiles (
   student_id uuid primary key references students(id) on delete cascade,
-  institute_id uuid not null references institutes(id),
+  institute_id uuid references institutes(id),
   personal jsonb, education jsonb, skills jsonb, preferences jsonb,
   summary text, experience jsonb, projects jsonb, certifications jsonb,
   achievements jsonb, activities jsonb, languages jsonb,
@@ -50,7 +58,7 @@ create table company_profiles (
 
 create table interview_sessions (
   id uuid primary key default gen_random_uuid(),
-  institute_id uuid not null references institutes(id),
+  institute_id uuid references institutes(id),
   student_id uuid not null references students(id) on delete cascade,
   attempt_no int not null default 1,
   company_profile_id uuid references company_profiles(id),
@@ -63,7 +71,7 @@ create table interview_sessions (
 
 create table session_rounds (
   id uuid primary key default gen_random_uuid(),
-  institute_id uuid not null references institutes(id),
+  institute_id uuid references institutes(id),
   session_id uuid not null references interview_sessions(id) on delete cascade,
   round text not null check (round in ('screening','hr_bp','functional','ceo')),
   try_no int not null default 1 check (try_no in (1,2)),
@@ -80,14 +88,14 @@ create table session_rounds (
 
 create table aptitude_attempts (
   id uuid primary key default gen_random_uuid(),
-  institute_id uuid not null references institutes(id),
+  institute_id uuid references institutes(id),
   round_id uuid not null references session_rounds(id) on delete cascade,
   questions jsonb not null, answers jsonb,
   mcq_score int, written_feedback jsonb, submitted_at timestamptz);
 
 create table offers (
   id uuid primary key default gen_random_uuid(),
-  institute_id uuid not null references institutes(id),
+  institute_id uuid references institutes(id),
   session_id uuid unique not null references interview_sessions(id) on delete cascade,
   role text, ctc numeric, joining text,
   decision text check (decision in ('pending','accepted','declined')) default 'pending',
@@ -95,14 +103,14 @@ create table offers (
 
 create table reports (
   id uuid primary key default gen_random_uuid(),
-  institute_id uuid not null references institutes(id),
+  institute_id uuid references institutes(id),
   session_id uuid not null references interview_sessions(id) on delete cascade,
   overall_score int, verdict text, report jsonb,
   pdf_key text, created_at timestamptz default now());
 
 create table gap_diagnoses (
   id uuid primary key default gen_random_uuid(),
-  institute_id uuid not null references institutes(id),
+  institute_id uuid references institutes(id),
   session_id uuid not null references interview_sessions(id) on delete cascade,
   gap_type text check (gap_type in ('communication','skill','expectation','aptitude')),
   title text, evidence text, resource_ids uuid[]);
@@ -130,7 +138,7 @@ create table batch_reports (
 
 create table consents (
   id uuid primary key default gen_random_uuid(),
-  institute_id uuid not null references institutes(id),
+  institute_id uuid references institutes(id),
   student_id uuid not null references students(id) on delete cascade,
   purpose text, version text, guardian_ref text, at timestamptz default now());
 
@@ -150,7 +158,8 @@ language sql stable security definer as $$
   select id from students where auth_user_id = auth.uid()
 $$;
 
--- row level security: institutes see only their own rows, students only their own
+-- row level security: institutes see only their own rows, students only their own.
+-- independent candidates have institute_id null, so no institute policy ever matches their rows.
 alter table institutes enable row level security;
 alter table institute_users enable row level security;
 alter table batches enable row level security;

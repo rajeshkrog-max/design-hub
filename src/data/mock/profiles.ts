@@ -1,5 +1,5 @@
 import type { ProfileTierName, StudentProfile } from "@/types/arena";
-import { students } from "./students";
+import { instituteStudents } from "./students";
 
 const cities = ["Bengaluru", "Pune", "Hyderabad", "Mumbai", "Delhi", "Chennai"];
 const techPool = ["Java", "Python", "SQL", "React", "Node.js", "DSA", "Excel", "Power BI", "C++", "AWS"];
@@ -18,7 +18,7 @@ function scoreFor(tier: ProfileTierName, index: number): number {
   return Math.min(97, base + ((index * 3) % 12));
 }
 
-export const profiles: StudentProfile[] = students.map((student, index) => {
+export const profiles: StudentProfile[] = instituteStudents.map((student, index) => {
   const tier = tierFor(index);
   const sparse = index % 4 === 3; // some profiles leave optional sections blank
   const incomplete = index === 0; // student-1: profile incomplete, not started
@@ -34,7 +34,7 @@ export const profiles: StudentProfile[] = students.map((student, index) => {
       : {
           name: student.name,
           email: student.email,
-          phone: `+91 98${String(10000000 + index * 137913).slice(0, 8)}`,
+          phone: student.phone,
           city: cities[index % cities.length]!,
           linkedin: `linkedin.com/in/${student.name.toLowerCase().replaceAll(" ", "-")}`,
           photo_url: null,

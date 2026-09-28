@@ -10,6 +10,8 @@ export type OfferDecision = "pending" | "accepted" | "declined";
 export type RestartStatus = "pending" | "approved" | "declined" | "used";
 export type StudentStatus = "invited" | "active" | "archived";
 export type InstituteRole = "admin" | "viewer";
+export type AccountType = "institute" | "independent";
+export type PlanKey = "standard" | "pro";
 export type ProfileTierName = "Starter" | "Good" | "Strong";
 export type SkillLevel = "basic" | "intermediate" | "advanced";
 
@@ -48,13 +50,23 @@ export interface Batch {
 
 export interface Student {
   id: string;
-  institute_id: string;
-  batch_id: string;
+  account_type: AccountType;
+  /** null for independent candidates */
+  institute_id: string | null;
+  /** null for independent candidates */
+  batch_id: string | null;
   auth_user_id: string | null;
   email: string;
+  /** WhatsApp number, used for OTP sign-in */
+  phone: string;
   name: string;
   photo_url: string | null;
   status: StudentStatus;
+  /** interview attempts granted (institute deal or individual plan) */
+  credits_total: number;
+  credits_used: number;
+  /** independent candidates only; null for institute students */
+  plan: PlanKey | null;
   consent_at: string | null;
   created_at: string;
 }
@@ -136,7 +148,7 @@ export type ProfileSectionKey =
 
 export interface StudentProfile {
   student_id: string;
-  institute_id: string;
+  institute_id: string | null;
   personal: PersonalSection | null;
   education: EducationSection | null;
   skills: SkillsSection | null;
@@ -179,7 +191,7 @@ export interface CompanyProfile {
 
 export interface InterviewSession {
   id: string;
-  institute_id: string;
+  institute_id: string | null;
   student_id: string;
   attempt_no: number;
   company_profile_id: string | null;
@@ -204,7 +216,7 @@ export interface GapEvidence {
 
 export interface SessionRound {
   id: string;
-  institute_id: string;
+  institute_id: string | null;
   session_id: string;
   round: RoundKey;
   try_no: 1 | 2;
@@ -240,7 +252,7 @@ export interface AptitudeQuestion {
 
 export interface AptitudeAttempt {
   id: string;
-  institute_id: string;
+  institute_id: string | null;
   round_id: string;
   questions: AptitudeQuestion[];
   answers: Record<string, number | string>;
@@ -251,7 +263,7 @@ export interface AptitudeAttempt {
 
 export interface Offer {
   id: string;
-  institute_id: string;
+  institute_id: string | null;
   session_id: string;
   role: string;
   ctc: string;
@@ -262,7 +274,7 @@ export interface Offer {
 
 export interface Report {
   id: string;
-  institute_id: string;
+  institute_id: string | null;
   session_id: string;
   overall_score: number;
   verdict: string;
@@ -273,7 +285,7 @@ export interface Report {
 
 export interface GapDiagnosis {
   id: string;
-  institute_id: string;
+  institute_id: string | null;
   session_id: string;
   gap_type: GapType;
   title: string;
@@ -319,7 +331,7 @@ export interface BatchReport {
 
 export interface Consent {
   id: string;
-  institute_id: string;
+  institute_id: string | null;
   student_id: string;
   purpose: string;
   version: string;
@@ -329,7 +341,7 @@ export interface Consent {
 
 export interface AuditLogEntry {
   id: string;
-  institute_id: string;
+  institute_id: string | null;
   actor_id: string;
   actor_type: "student" | "institute";
   action: string;
@@ -343,7 +355,8 @@ export interface SessionUser {
   auth_user_id: string;
   student_id?: string;
   institute_user_id?: string;
-  institute_id: string;
+  /** null for independent candidates */
+  institute_id: string | null;
 }
 
 /** Derived, per-student dashboard state — computed by the service layer. */

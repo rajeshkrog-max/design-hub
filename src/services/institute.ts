@@ -1,9 +1,10 @@
 import { getStore, nextId, persist } from "@/data/mock/store";
+import { INSTITUTE_CREDITS } from "@/lib/rules";
 import { deriveStudent, logAudit } from "./student";
 import type { Batch, SessionUser, Student, StudentDerived } from "@/types/arena";
 
 function requireInstitute(user: SessionUser) {
-  if (user.role !== "institute") throw new Error("Institute access required");
+  if (user.role !== "institute" || !user.institute_id) throw new Error("Institute access required");
   const store = getStore();
   const institute = store.institutes.find((i) => i.id === user.institute_id);
   if (!institute) throw new Error("Institute not found");
@@ -173,13 +174,18 @@ export function addRosterRows(user: SessionUser, batchId: string, rows: Array<{ 
     if (!row.name || !row.email) continue;
     store.students.push({
       id: nextId("student"),
-      institute_id: user.institute_id,
+      account_type: "institute",
+      institute_id: batch.institute_id,
       batch_id: batchId,
       auth_user_id: null,
       email: row.email,
+      phone: "",
       name: row.name,
       photo_url: null,
       status: "invited",
+      credits_total: INSTITUTE_CREDITS,
+      credits_used: 0,
+      plan: null,
       consent_at: null,
       created_at: new Date().toISOString(),
     });

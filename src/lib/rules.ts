@@ -1,7 +1,24 @@
 import type {
-  Institute, InterviewSession, Offer, ProfileSectionKey, RoundKey, RoundStatus,
-  SessionRound, StudentProfile,
+  Institute, InterviewSession, Offer, PlanKey, ProfileSectionKey, RoundKey, RoundStatus,
+  SessionRound, Student, StudentProfile,
 } from "@/types/arena";
+
+/** Thresholds a session is judged against: the institute's, or these for independent candidates. */
+export type Thresholds = Pick<Institute, "pass_bar" | "ceo_threshold">;
+export const INDEPENDENT_THRESHOLDS: Thresholds = { pass_bar: 60, ceo_threshold: 65 };
+
+/** Interview attempts granted to an institute student by the institute deal. */
+export const INSTITUTE_CREDITS = 3;
+
+/** Individual plans (independent candidates only; institute students never see prices). */
+export const PLANS: Record<PlanKey, { label: string; price_inr: number; credits: number; perks: string[] }> = {
+  standard: { label: "Standard", price_inr: 499, credits: 3, perks: ["3 full interview attempts", "Round-by-round reports", "Resource roadmap"] },
+  pro: { label: "Pro", price_inr: 999, credits: 8, perks: ["8 full interview attempts", "Everything in Standard", "Print-ready CV templates"] },
+};
+
+export function creditsLeft(student: Student): number {
+  return Math.max(0, student.credits_total - student.credits_used);
+}
 
 export const ROUND_ORDER: RoundKey[] = ["screening", "hr_bp", "functional", "ceo"];
 export const REQUIRED_PROFILE_SECTIONS: ProfileSectionKey[] = ["personal", "education", "skills", "preferences"];
@@ -87,7 +104,7 @@ export function currentAverage(rounds: SessionRound[]): number | null {
   return scores.reduce((a, b) => a + b, 0) / 3;
 }
 
-export function ceoUnlocked(rounds: SessionRound[], institute: Institute): boolean {
+export function ceoUnlocked(rounds: SessionRound[], institute: Thresholds): boolean {
   const avg = currentAverage(rounds);
   return avg !== null && avg >= institute.ceo_threshold;
 }
@@ -100,7 +117,7 @@ export function allRoundsDone(rounds: SessionRound[]): boolean {
 }
 
 /** Student can go no further: incomplete round, or CEO locked below threshold. */
-export function stuck(session: InterviewSession, rounds: SessionRound[], institute: Institute): boolean {
+export function stuck(session: InterviewSession, rounds: SessionRound[], institute: Thresholds): boolean {
   if (session.status !== "in_progress") return false;
   const anyIncomplete = rounds.some((r) => r.is_current && r.status === "incomplete");
   if (anyIncomplete) return true;
@@ -113,14 +130,14 @@ export function stuck(session: InterviewSession, rounds: SessionRound[], institu
   return anyFailed;
 }
 
-export function reportsUnlocked(session: InterviewSession, rounds: SessionRound[], institute: Institute): boolean {
+export function reportsUnlocked(session: InterviewSession, rounds: SessionRound[], institute: Thresholds): boolean {
   return session.status === "completed" || stuck(session, rounds, institute);
 }
 
 export function canRequestRestart(
   session: InterviewSession,
   rounds: SessionRound[],
-  institute: Institute,
+  institute: Thresholds,
   pending: boolean,
 ): boolean {
   if (pending) return false;

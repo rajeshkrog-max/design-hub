@@ -15,6 +15,7 @@ import { Route as InstituteRouteImport } from './routes/institute'
 import { Route as InstituteLoginRouteImport } from './routes/institute-login'
 import { Route as InviteRouteImport } from './routes/invite'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PlansRouteImport } from './routes/plans'
 import { Route as StudentLoginRouteImport } from './routes/student-login'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +48,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlansRoute = PlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudentLoginRoute = StudentLoginRouteImport.update({
   id: '/student-login',
   path: '/student-login',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/institute-login': typeof InstituteLoginRoute
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
   '/student-login': typeof StudentLoginRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/institute-login': typeof InstituteLoginRoute
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
   '/student-login': typeof StudentLoginRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/institute-login': typeof InstituteLoginRoute
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
   '/student-login': typeof StudentLoginRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/institute-login'
     | '/invite'
     | '/login'
+    | '/plans'
     | '/student-login'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/institute-login'
     | '/invite'
     | '/login'
+    | '/plans'
     | '/student-login'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/institute-login'
     | '/invite'
     | '/login'
+    | '/plans'
     | '/student-login'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   InstituteLoginRoute: typeof InstituteLoginRoute
   InviteRoute: typeof InviteRoute
   LoginRoute: typeof LoginRoute
+  PlansRoute: typeof PlansRoute
   StudentLoginRoute: typeof StudentLoginRoute
 }
 
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/plans': {
+      id: '/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof PlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/student-login': {
       id: '/student-login'
       path: '/student-login'
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   InstituteLoginRoute: InstituteLoginRoute,
   InviteRoute: InviteRoute,
   LoginRoute: LoginRoute,
+  PlansRoute: PlansRoute,
   StudentLoginRoute: StudentLoginRoute,
 }
 export const routeTree = rootRouteImport
