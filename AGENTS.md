@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep Sera as a front-end prototype backed by typed, tenant-scoped mock services; this preserves the future backend contract without connecting services now.
+- Centralize interview eligibility, retry, resume, CEO threshold, and CV unlock rules in `src/lib/rules.ts` so demo controls never replace business logic.
