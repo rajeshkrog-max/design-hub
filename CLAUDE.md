@@ -4,6 +4,8 @@ Front-end prototype of Sera Interview Arena, backed by typed mock data
 (`src/data/mock`) and tenant-scoped services (`src/services`).
 
 ## Read first
+Read docs/HANDOFF.md first.
+
 1. `docs/STATUS.md`: current state, gaps and priorities. Read it before any work.
 2. `docs/spec-round2.md`: the spec.
 3. `docs/sera-arena-reference.html`: the agreed design.
