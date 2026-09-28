@@ -429,6 +429,7 @@ export function deriveStudent(student: Student): StudentDerived {
     rounds,
     offer,
     restart,
+    attempts: store.interview_sessions.filter((s) => s.student_id === student.id),
     state_label,
     current_round: live?.round ?? null,
     last_score: lastDone?.score ?? null,

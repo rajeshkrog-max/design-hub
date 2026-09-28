@@ -354,6 +354,7 @@ export interface StudentDerived {
   rounds: SessionRound[];
   offer: Offer | null;
   restart: RestartRequest | null;
+  attempts: InterviewSession[];
   state_label: string;
   current_round: RoundKey | null;
   last_score: number | null;

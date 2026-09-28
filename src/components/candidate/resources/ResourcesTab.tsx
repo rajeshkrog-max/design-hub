@@ -4,7 +4,8 @@ import { Pill, Surface } from "@/components/shared";
 import { getMyResources } from "@/services/student";
 import type { GapType, SessionUser } from "@/types/arena";
 
-const FILTERS: Array<GapType | "All"> = ["All", "Skill gap", "Communication", "Expectation", "Aptitude"];
+const FILTERS: Array<GapType | "All"> = ["All", "skill", "communication", "expectation", "aptitude"];
+const LABELS: Record<string, string> = { All: "All", skill: "Skill gap", communication: "Communication", expectation: "Expectation", aptitude: "Aptitude" };
 
 export function ResourcesTab({ user }: { user: SessionUser }) {
   const [filter, setFilter] = useState<GapType | "All">("All");
@@ -24,7 +25,7 @@ export function ResourcesTab({ user }: { user: SessionUser }) {
             onClick={() => setFilter(f)}
             className={`rounded-full px-4 py-1.5 text-sm ${filter === f ? "bg-secondary font-medium" : "text-muted-foreground"}`}
           >
-            {f}
+            {LABELS[f]}
           </button>
         ))}
       </div>
@@ -32,12 +33,12 @@ export function ResourcesTab({ user }: { user: SessionUser }) {
         {list.map((r) => (
           <Surface key={r.id} className="p-5">
             <div className="flex items-center justify-between">
-              <Pill tone="blue">{r.gap_type}</Pill>
+              <Pill tone="blue">{LABELS[r.gap_type] ?? r.gap_type}</Pill>
               {r.is_paid ? <Pill tone="attention">Paid</Pill> : <Pill tone="success">Free</Pill>}
             </div>
             <p className="mt-3 font-medium">{r.title}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{r.source} · {r.length}</p>
-            <a href="#" onClick={(e) => e.preventDefault()} className="mt-4 inline-flex items-center gap-1.5 text-sm text-success">
+            <p className="mt-1 text-xs text-muted-foreground">{r.skill} · {r.level} · {r.kind}</p>
+            <a href={r.url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-sm text-success">
               Open resource <ExternalLink className="size-3.5" />
             </a>
           </Surface>
