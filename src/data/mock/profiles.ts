@@ -21,7 +21,7 @@ function scoreFor(tier: ProfileTierName, index: number): number {
 export const profiles: StudentProfile[] = instituteStudents.map((student, index) => {
   const tier = tierFor(index);
   const sparse = index % 4 === 3; // some profiles leave optional sections blank
-  const incomplete = index === 0; // student-1: profile incomplete, not started
+  const incomplete = index === 24; // student-25: profile incomplete, not started
   const tech = [0, 1, 2].map((k) => ({
     name: techPool[(index + k) % techPool.length]!,
     level: (["basic", "intermediate", "advanced"] as const)[(index + k) % 3]!,

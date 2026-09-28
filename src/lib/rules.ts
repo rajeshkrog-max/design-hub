@@ -20,17 +20,31 @@ export function creditsLeft(student: Student): number {
   return Math.max(0, student.credits_total - student.credits_used);
 }
 
-export const ROUND_ORDER: RoundKey[] = ["screening", "hr_bp", "functional", "ceo"];
+/** Screening → aptitude → HR BP → CEO. CEO opens only when the student unlocks it (see canUnlockCeo). */
+export const ROUND_ORDER: RoundKey[] = ["screening", "aptitude", "hr_bp", "ceo"];
 export const REQUIRED_PROFILE_SECTIONS: ProfileSectionKey[] = ["personal", "education", "skills", "preferences"];
 
 export const ROUND_DURATION_SEC: Record<RoundKey, number> = {
   screening: 5 * 60,
-  hr_bp: 8 * 60,
-  functional: 10 * 60,
-  ceo: 6 * 60,
+  aptitude: 20 * 60,
+  hr_bp: 5 * 60,
+  ceo: 5 * 60,
 };
 
-const SECTION_WEIGHTS: Record<ProfileSectionKey, number> = {
+/** Aptitude is a timed MCQ test; the other three rounds are voice interviews. */
+export const APTITUDE_QUESTION_COUNT = 15;
+export const isVoiceRound = (round: RoundKey) => round !== "aptitude";
+
+/** What each round scores. Every metric is judged against the pass bar. */
+export const ROUND_CHECKS: Record<RoundKey, string[]> = {
+  screening: ["Communication", "Role awareness", "Confidence"],
+  aptitude: ["Quant", "Logical", "SQL", "Verbal"],
+  hr_bp: ["Culture fit", "CV consistency", "Salary alignment", "Role motivation"],
+  ceo: ["Clarity of thought", "Ownership", "Long-term fit"],
+};
+
+/** How much each filled profile section adds to profile strength (sums to 100). */
+export const SECTION_WEIGHTS: Record<ProfileSectionKey, number> = {
   personal: 16,
   education: 16,
   skills: 16,
@@ -76,9 +90,11 @@ export function currentRound(rounds: SessionRound[], round: RoundKey): SessionRo
   return rounds.find((r) => r.round === round && r.is_current);
 }
 
-export function roundStatus(rounds: SessionRound[], round: RoundKey): RoundStatus {
+/** `ceoOpen` is the session's ceo_unlocked flag: the CEO round never opens on its own. */
+export function roundStatus(rounds: SessionRound[], round: RoundKey, ceoOpen = false): RoundStatus {
   const row = currentRound(rounds, round);
   if (row) return row.status;
+  if (round === "ceo") return ceoOpen ? "ready" : "locked";
   const idx = ROUND_ORDER.indexOf(round);
   const prev = ROUND_ORDER[idx - 1];
   if (!prev) return "ready";
@@ -94,7 +110,7 @@ export function canResume(round: SessionRound): boolean {
   return round.status === "live" && round.disconnect_count > 0 && !round.resume_used;
 }
 
-/** Average of current screening, HR BP and functional scores (try 2 replaces try 1). */
+/** Average of current screening, aptitude and HR BP scores (try 2 replaces try 1). */
 export function currentAverage(rounds: SessionRound[]): number | null {
   const scores = ROUND_ORDER.slice(0, 3)
     .map((key) => currentRound(rounds, key))
@@ -104,9 +120,22 @@ export function currentAverage(rounds: SessionRound[]): number | null {
   return scores.reduce((a, b) => a + b, 0) / 3;
 }
 
-export function ceoUnlocked(rounds: SessionRound[], institute: Thresholds): boolean {
+/** The "Unlock CEO round" button is enabled when HR BP is done and the 3-round average meets the threshold. */
+export function canUnlockCeo(rounds: SessionRound[], institute: Thresholds): boolean {
+  if (currentRound(rounds, "hr_bp")?.status !== "completed") return false;
   const avg = currentAverage(rounds);
   return avg !== null && avg >= institute.ceo_threshold;
+}
+
+/** Share of the four-round journey done, counting a live round's progress. */
+export function journeyProgress(rounds: SessionRound[]): number {
+  const done = ROUND_ORDER.reduce((sum, key) => {
+    const row = currentRound(rounds, key);
+    if (row?.status === "completed") return sum + 1;
+    if (row?.status === "live") return sum + row.progress_pct / 100;
+    return sum;
+  }, 0);
+  return Math.round((done / ROUND_ORDER.length) * 100);
 }
 
 export function allRoundsDone(rounds: SessionRound[]): boolean {
@@ -116,13 +145,13 @@ export function allRoundsDone(rounds: SessionRound[]): boolean {
   });
 }
 
-/** Student can go no further: incomplete round, or CEO locked below threshold. */
+/** Student can go no further: incomplete round, or HR BP done with the average below the CEO threshold. */
 export function stuck(session: InterviewSession, rounds: SessionRound[], institute: Thresholds): boolean {
   if (session.status !== "in_progress") return false;
   const anyIncomplete = rounds.some((r) => r.is_current && r.status === "incomplete");
   if (anyIncomplete) return true;
-  const ceo = currentRound(rounds, "ceo");
-  if (ceo?.status === "locked" && !ceoUnlocked(rounds, institute)) return true;
+  const hrDone = currentRound(rounds, "hr_bp")?.status === "completed";
+  if (hrDone && !session.ceo_unlocked && !canUnlockCeo(rounds, institute)) return true;
   const anyFailed = ROUND_ORDER.some((key) => {
     const row = currentRound(rounds, key);
     return row?.verdict === "needs_improvement" && !canRetry(row);
@@ -150,7 +179,15 @@ export function canPrintCv(rounds: SessionRound[], offer: Offer | null): boolean
 
 export const ROUND_LABELS: Record<RoundKey, string> = {
   screening: "Sera screening",
+  aptitude: "Aptitude",
   hr_bp: "HR BP round",
-  functional: "Functional",
   ceo: "CEO round",
+};
+
+/** Who runs each voice round. Aptitude has no interviewer. */
+export const ROUND_PERSONAS: Record<RoundKey, { name: string; role: string }> = {
+  screening: { name: "Sera", role: "AI screener" },
+  aptitude: { name: "Aptitude test", role: "15 questions · 20 minutes" },
+  hr_bp: { name: "Ananya Mehta", role: "HR business partner" },
+  ceo: { name: "Maya Rao", role: "Chief executive" },
 };

@@ -26,8 +26,8 @@ export const instituteStudents: Student[] = names.map((name, index) => ({
   photo_url: null,
   status: "active",
   credits_total: INSTITUTE_CREDITS,
-  // students 3–22 (indexes 2–21) have used one attempt in the seeded sessions
-  credits_used: index >= 2 && index <= 21 ? 1 : 0,
+  // students 1 and 3–22 (indexes 0 and 2–21) have used one attempt in the seeded sessions
+  credits_used: index === 0 || (index >= 2 && index <= 21) ? 1 : 0,
   plan: null,
   consent_at: "2026-08-20",
   created_at: "2026-08-14",

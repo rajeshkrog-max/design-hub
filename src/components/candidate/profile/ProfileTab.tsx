@@ -1,29 +1,19 @@
-import { useState } from "react";
-import { Check, ChevronRight, Sparkles } from "lucide-react";
+import { useRef, useState } from "react";
+import {
+  Award, Briefcase, ChevronRight, Code2, Folder, GraduationCap, Languages, Lock, Quote, Sparkles,
+  Target, Trophy, UserRound, Users, Zap,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Pill, Surface } from "@/components/shared";
-import { filledSections } from "@/lib/rules";
-import { getMyProfile, saveProfileSection } from "@/services/student";
+import { Pill, ProgressBar } from "@/components/shared";
+import { REQUIRED_PROFILE_SECTIONS, canPrintCv, filledSections, profileTier } from "@/lib/rules";
+import { cn } from "@/lib/utils";
+import { getMyAccount, getMyProfile, getMySession, markCvUploaded, saveProfileSection } from "@/services/student";
 import type {
-  CertificationItem, ExperienceItem, PreferencesSection, ProfileSectionKey,
-  ProjectItem, SessionUser, StudentProfile,
+  PreferencesSection, ProfileSectionKey, SessionUser, StudentProfile,
 } from "@/types/arena";
-
-const SECTIONS: Array<{ key: ProfileSectionKey; title: string; optional: boolean }> = [
-  { key: "personal", title: "Personal", optional: false },
-  { key: "education", title: "Education", optional: false },
-  { key: "skills", title: "Skills", optional: false },
-  { key: "preferences", title: "Job preferences", optional: false },
-  { key: "summary", title: "About you", optional: true },
-  { key: "experience", title: "Internships and work", optional: true },
-  { key: "projects", title: "Projects", optional: true },
-  { key: "certifications", title: "Certifications", optional: true },
-  { key: "achievements", title: "Achievements and coding profiles", optional: true },
-  { key: "activities", title: "Activities and leadership", optional: true },
-  { key: "languages", title: "Languages", optional: true },
-];
+import { Btn, Card, initials, type GoTo } from "../ui";
 
 function Field({ label, value, onChange, area = false, placeholder }: {
   label: string; value: string; onChange: (v: string) => void; area?: boolean; placeholder?: string;
@@ -210,55 +200,164 @@ function ListEditor({ items, onSave, onSkip }: { items: string[]; onSave: (rows:
   );
 }
 
-export function ProfileTab({ user }: { user: SessionUser }) {
+const SECTION_META: Record<ProfileSectionKey, { title: string; Icon: typeof UserRound; empty: string }> = {
+  personal: { title: "Personal details", Icon: UserRound, empty: "Name, phone, city, LinkedIn" },
+  education: { title: "Education", Icon: GraduationCap, empty: "Degree, college, CGPA" },
+  skills: { title: "Skills", Icon: Zap, empty: "Technical skills, tools, soft skills" },
+  preferences: { title: "Job preferences", Icon: Target, empty: "Role, cities, expected CTC" },
+  summary: { title: "About you", Icon: Quote, empty: "A short intro, drafted by Sera from your CV" },
+  experience: { title: "Internships and work", Icon: Briefcase, empty: "Internships, part-time work" },
+  projects: { title: "Projects", Icon: Code2, empty: "What you built and its impact" },
+  certifications: { title: "Certifications", Icon: Award, empty: "AWS, Google, NPTEL and similar" },
+  achievements: { title: "Achievements and coding profiles", Icon: Trophy, empty: "Hackathons, LeetCode, CodeChef" },
+  activities: { title: "Activities and leadership", Icon: Users, empty: "Clubs, volunteering, sport" },
+  languages: { title: "Languages", Icon: Languages, empty: "Languages you speak" },
+};
+
+/** One line describing what a filled section holds. */
+function summaryOf(profile: StudentProfile, key: ProfileSectionKey): string | null {
+  switch (key) {
+    case "personal":
+      return profile.personal && [profile.personal.name, profile.personal.city, profile.personal.phone].filter(Boolean).join(" · ");
+    case "education":
+      return profile.education && [`${profile.education.degree} ${profile.education.branch}`.trim(), profile.education.cgpa && `${profile.education.cgpa} CGPA`, profile.education.grad_year].filter(Boolean).join(" · ");
+    case "skills": {
+      const names = profile.skills?.technical.map((t) => t.name) ?? [];
+      return names.length ? `${names.slice(0, 3).join(", ")}${names.length > 3 ? ` and ${names.length - 3} more` : ""}` : null;
+    }
+    case "preferences":
+      return profile.preferences && [profile.preferences.role, profile.preferences.cities[0], profile.preferences.expected_ctc].filter(Boolean).join(" · ");
+    case "summary":
+      return profile.summary ? "Drafted by Sera from your CV" : null;
+    case "experience":
+      return profile.experience[0] ? `${profile.experience[0].role} · ${profile.experience[0].company} · ${profile.experience[0].dates}` : null;
+    case "projects":
+      return profile.projects.length ? profile.projects.map((p) => p.title).join(", ") : null;
+    case "certifications":
+      return profile.certifications.length ? profile.certifications.map((c) => c.name).join(", ") : null;
+    default:
+      return profile[key].length ? profile[key].join(", ") : null;
+  }
+}
+
+function blankProfile(user: SessionUser): StudentProfile {
+  return {
+    student_id: user.student_id ?? "", institute_id: user.institute_id,
+    personal: null, education: null, skills: null, preferences: null, summary: null,
+    experience: [], projects: [], certifications: [], achievements: [], activities: [], languages: [],
+    strength_score: 0, strength_tier: "Starter", required_complete: false,
+    cv_file_key: null, cv_extracted: false, updated_at: "",
+  };
+}
+
+export function ProfileTab({ user, goTo }: { user: SessionUser; goTo: GoTo }) {
   const [open, setOpen] = useState<ProfileSectionKey | null>(null);
-  const [version, setVersion] = useState(0);
-  const profile = getMyProfile(user);
-  if (!profile) return <p className="text-sm text-muted-foreground">Profile not found.</p>;
+  const [reading, setReading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const profile = getMyProfile(user) ?? blankProfile(user);
+  const account = getMyAccount(user);
+  const { rounds, offer } = getMySession(user);
   const filled = filledSections(profile);
+  const name = profile.personal?.name ?? account.student.name;
+  const tier = profileTier(profile.strength_score);
+  const strong = profileTier(80);
+  const requiredDone = REQUIRED_PROFILE_SECTIONS.filter((k) => filled.includes(k)).length;
+  const printReady = canPrintCv(rounds, offer);
+
+  function handleFile(file: File | undefined) {
+    if (!file) return;
+    setReading(true);
+    // mock CV parsing: the backend extracts fields from the PDF later
+    setTimeout(() => {
+      markCvUploaded(user, `cv/${file.name}`);
+      setReading(false);
+    }, 1500);
+  }
+
+  function row(key: ProfileSectionKey) {
+    const meta = SECTION_META[key];
+    const done = filled.includes(key);
+    const isOpen = open === key;
+    return (
+      <div key={key} className="border-t border-line first:border-t-0">
+        <button className="flex w-full items-center gap-3.5 px-1 py-[13px] text-left" onClick={() => setOpen(isOpen ? null : key)} aria-expanded={isOpen}>
+          <span className="clay-inset grid size-9 shrink-0 place-items-center rounded-xl text-ink-2"><meta.Icon className="size-[17px]" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium">{meta.title}</span>
+            <span className="block truncate text-[11.5px] text-ink-3">{summaryOf(profile, key) || meta.empty}</span>
+          </span>
+          {done ? <Pill tone="sage">Done</Pill> : <span className="text-[11.5px] text-ink-3">Add</span>}
+          <ChevronRight className={cn("size-4 text-ink-3 transition-transform", isOpen && "rotate-90")} />
+        </button>
+        {isOpen && (
+          <div className="px-1 pb-5 pt-1">
+            <SectionEditor
+              profile={profile}
+              section={key}
+              onSave={(value) => {
+                saveProfileSection(user, key, value);
+                setOpen(null);
+              }}
+              onSkip={() => setOpen(null)}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <section className="space-y-4" key={version}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-medium">Your profile</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Strength {profile.strength_score} · {profile.strength_tier} tier. Sparkles mark fields Sera read from your CV.</p>
-        </div>
-        <Pill tone="sage">{filled.length} / {SECTIONS.length} sections</Pill>
+    <section className="grid gap-5 min-[1100px]:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="grid content-start gap-5">
+        <Card className="text-center">
+          <div className="mx-auto grid size-[76px] place-items-center rounded-3xl bg-blue text-[22px] font-semibold text-blue-ink shadow-raise-sm">{initials(name)}</div>
+          <h3 className="mt-3 text-base font-semibold">{name}</h3>
+          <p className="text-[11.5px] text-ink-2">
+            {[profile.education && `${profile.education.degree} ${profile.education.branch}`.trim(), profile.education?.grad_year, account.institute?.name ?? profile.education?.college]
+              .filter(Boolean)
+              .join(" · ") || "Add your education"}
+          </p>
+          <div className="mt-4 text-left">
+            <div className="flex justify-between text-[12.5px]"><span>Profile strength</span><b className="tabular-nums">{profile.strength_score} · {tier.name}</b></div>
+            <ProgressBar value={profile.strength_score} tone="amber" marker={80} className="mt-1.5" />
+            <p className="mt-1.5 text-[11.5px] text-ink-3">
+              {tier.name === "Strong" ? `Strong · matches ${tier.match.toLowerCase()}, ${tier.ctc}` : `Strong at 80 · matches ${strong.match.toLowerCase()}, ${strong.ctc}`}
+            </p>
+          </div>
+        </Card>
+
+        <Card className="flex items-center gap-3">
+          <span className="clay-chip grid size-[34px] shrink-0 place-items-center rounded-[11px] bg-sage text-sage-ink"><Folder className="size-4" /></span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[12.5px] font-semibold">{reading ? "Sera is reading your CV…" : profile.cv_file_key ? profile.cv_file_key.split("/").pop() : "No CV yet"}</div>
+            <div className="text-[11.5px] text-ink-3">{profile.cv_extracted ? `Sera filled ${filled.length} sections` : "PDF, up to 10 MB"}</div>
+          </div>
+          <Btn className="px-3 py-[7px] text-[12.5px]" disabled={reading} onClick={() => fileRef.current?.click()}>{profile.cv_file_key ? "Replace" : "Upload"}</Btn>
+          <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+        </Card>
+
+        <Btn disabled={!printReady} onClick={() => goTo("reports")}>
+          {!printReady && <Lock className="!size-3" />}
+          {printReady ? "Print CV" : "Print CV · after offer"}
+        </Btn>
       </div>
-      {SECTIONS.map(({ key, title, optional }) => {
-        const done = filled.includes(key);
-        const isOpen = open === key;
-        return (
-          <Surface key={key} className="overflow-hidden">
-            <button
-              className="flex w-full items-center justify-between p-5 text-left"
-              onClick={() => setOpen(isOpen ? null : key)}
-            >
-              <span className="flex items-center gap-3 text-sm font-medium">
-                {done ? <Check className="size-4 text-success" /> : <span className="size-4 rounded-full border border-border" />}
-                {title}
-                {optional && <span className="text-xs font-normal text-muted-foreground">optional</span>}
-              </span>
-              <ChevronRight className={`size-4 transition-transform ${isOpen ? "rotate-90" : ""}`} />
-            </button>
-            {isOpen && (
-              <div className="border-t border-border/60 p-5">
-                <SectionEditor
-                  profile={profile}
-                  section={key}
-                  onSave={(value) => {
-                    saveProfileSection(user, key, value);
-                    setOpen(null);
-                    setVersion((v) => v + 1);
-                  }}
-                  onSkip={() => setOpen(null)}
-                />
-              </div>
-            )}
-          </Surface>
-        );
-      })}
+
+      <Card>
+        <div className="mb-3.5 flex items-center gap-2.5">
+          <h3 className="text-[14.5px] font-semibold">Needed to start</h3>
+          <span className="flex-1" />
+          {requiredDone === REQUIRED_PROFILE_SECTIONS.length
+            ? <Pill tone="sage">All done</Pill>
+            : <span className="text-[11.5px] text-ink-3 tabular-nums">{requiredDone} of {REQUIRED_PROFILE_SECTIONS.length}</span>}
+        </div>
+        {REQUIRED_PROFILE_SECTIONS.map(row)}
+        <div className="mb-3.5 mt-[22px] flex items-center gap-2.5">
+          <h3 className="text-[14.5px] font-semibold">Optional</h3>
+          <span className="flex-1" />
+          <span className="text-[11.5px] text-ink-3">Each one lifts your strength</span>
+        </div>
+        {(Object.keys(SECTION_META) as ProfileSectionKey[]).filter((k) => !REQUIRED_PROFILE_SECTIONS.includes(k)).map(row)}
+      </Card>
     </section>
   );
 }

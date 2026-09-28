@@ -1,13 +1,14 @@
 import { getStore, nextId, persist } from "@/data/mock/store";
 import { aptitudeQuestions } from "@/data/mock/aptitude";
+import { roundFeedback } from "@/data/mock/feedback";
 import {
-  INDEPENDENT_THRESHOLDS, ROUND_ORDER, canRequestRestart, canResume, canRetry, ceoUnlocked,
-  creditsLeft, currentAverage, currentRound, profileStrength, profileTier, reportsUnlocked,
-  type Thresholds,
+  INDEPENDENT_THRESHOLDS, ROUND_CHECKS, ROUND_ORDER, ROUND_PERSONAS, canRequestRestart, canResume,
+  canRetry, canUnlockCeo, creditsLeft, currentAverage, currentRound, profileStrength, profileTier,
+  reportsUnlocked, roundStatus, type Thresholds,
 } from "@/lib/rules";
 import type {
-  AptitudeAttempt, CompanyProfile, InterviewSession, Offer, ProfileSectionKey,
-  RoundKey, SessionRound, SessionUser, Student, StudentProfile, StudentDerived,
+  AptitudeAttempt, CompanyProfile, Institute, InterviewSession, Offer, ProfileSectionKey,
+  RoundKey, RubricBar, SessionRound, SessionUser, Student, StudentProfile, StudentDerived,
 } from "@/types/arena";
 
 function requireStudent(user: SessionUser): Student {
@@ -30,10 +31,11 @@ function ownSession(student: Student, sessionId: string): InterviewSession {
   return session;
 }
 
-/** Header data: credits for institute students, plan name for independents. */
-export function getMyAccount(user: SessionUser): { student: Student; credits_left: number } {
+/** Sidebar data: institute and credits for institute students, plan name for independents. */
+export function getMyAccount(user: SessionUser): { student: Student; institute: Institute | null; credits_left: number } {
   const student = requireStudent(user);
-  return { student, credits_left: creditsLeft(student) };
+  const institute = getStore().institutes.find((i) => i.id === student.institute_id) ?? null;
+  return { student, institute, credits_left: creditsLeft(student) };
 }
 
 export function logAudit(
@@ -60,12 +62,7 @@ export function getMyProfile(user: SessionUser): StudentProfile | null {
   return getStore().student_profiles.find((p) => p.student_id === student.id) ?? null;
 }
 
-export function saveProfileSection(
-  user: SessionUser,
-  section: ProfileSectionKey,
-  value: unknown,
-): StudentProfile {
-  const student = requireStudent(user);
+function ensureProfile(student: Student): StudentProfile {
   const store = getStore();
   let profile = store.student_profiles.find((p) => p.student_id === student.id);
   if (!profile) {
@@ -79,6 +76,15 @@ export function saveProfileSection(
     };
     store.student_profiles.push(profile);
   }
+  return profile;
+}
+
+export function saveProfileSection(
+  user: SessionUser,
+  section: ProfileSectionKey,
+  value: unknown,
+): StudentProfile {
+  const profile = ensureProfile(requireStudent(user));
   (profile as unknown as Record<string, unknown>)[section] = value;
   profile.strength_score = profileStrength(profile);
   profile.strength_tier = profileTier(profile.strength_score).name;
@@ -91,10 +97,7 @@ export function saveProfileSection(
 }
 
 export function markCvUploaded(user: SessionUser, fileKey: string): StudentProfile {
-  const student = requireStudent(user);
-  const store = getStore();
-  const profile = store.student_profiles.find((p) => p.student_id === student.id);
-  if (!profile) throw new Error("Profile not found");
+  const profile = ensureProfile(requireStudent(user));
   profile.cv_file_key = fileKey;
   profile.cv_extracted = true;
   profile.updated_at = new Date().toISOString();
@@ -107,18 +110,28 @@ export function getMySession(user: SessionUser): {
   rounds: SessionRound[];
   offer: Offer | null;
   company: CompanyProfile | null;
+  thresholds: Thresholds;
+  can_unlock_ceo: boolean;
 } {
   const student = requireStudent(user);
   const store = getStore();
+  const thresholds = thresholdsFor(student.institute_id);
   const session =
     store.interview_sessions
       .filter((s) => s.student_id === student.id)
       .sort((a, b) => b.attempt_no - a.attempt_no)[0] ?? null;
-  if (!session) return { session: null, rounds: [], offer: null, company: null };
+  if (!session) return { session: null, rounds: [], offer: null, company: null, thresholds, can_unlock_ceo: false };
   const rounds = store.session_rounds.filter((r) => r.session_id === session.id);
   const offer = store.offers.find((o) => o.session_id === session.id) ?? null;
   const company = store.company_profiles.find((c) => c.id === session.company_profile_id) ?? null;
-  return { session, rounds, offer, company };
+  return {
+    session,
+    rounds,
+    offer,
+    company,
+    thresholds,
+    can_unlock_ceo: !session.ceo_unlocked && canUnlockCeo(rounds, thresholds),
+  };
 }
 
 export function getCompanyOptions(user: SessionUser): CompanyProfile[] {
@@ -167,6 +180,10 @@ export function startRound(user: SessionUser, round: RoundKey): SessionRound {
     .filter((s) => s.student_id === student.id && s.status === "in_progress")
     .sort((a, b) => b.attempt_no - a.attempt_no)[0];
   if (!session) throw new Error("No active session");
+  const sessionRounds = store.session_rounds.filter((r) => r.session_id === session.id);
+  if (roundStatus(sessionRounds, round, session.ceo_unlocked) === "locked") {
+    throw new Error(round === "ceo" ? "Unlock the CEO round first" : "Finish the previous round first");
+  }
   const existing = store.session_rounds.find(
     (r) => r.session_id === session.id && r.round === round && r.is_current,
   );
@@ -183,7 +200,7 @@ export function startRound(user: SessionUser, round: RoundKey): SessionRound {
     round,
     try_no: 1,
     is_current: true,
-    persona: { screening: "Sera", hr_bp: "Ananya (HR BP)", functional: "Rahul (Panel)", ceo: "CEO" }[round],
+    persona: ROUND_PERSONAS[round].name,
     retell_agent_id: null,
     retell_call_id: null,
     status: "live",
@@ -193,6 +210,7 @@ export function startRound(user: SessionUser, round: RoundKey): SessionRound {
     rubric: [],
     strengths: [],
     gaps: [],
+    improve: [],
     expertise: [],
     notes_for_next: "",
     transcript_key: null,
@@ -215,33 +233,27 @@ function findRound(user: SessionUser, roundId: string): SessionRound {
   return round;
 }
 
+/** End a voice round. Mock: the score and feedback are generated; the backend scores it later. */
 export function endRound(user: SessionUser, roundId: string, score?: number): SessionRound {
   const round = findRound(user, roundId);
+  return finishRound(round, score ?? 55 + Math.floor(Math.random() * 35));
+}
+
+function finishRound(round: SessionRound, finalScore: number, rubric?: RubricBar[]): SessionRound {
   const store = getStore();
-  const finalScore = score ?? 55 + Math.floor(Math.random() * 35);
+  const session = store.interview_sessions.find((s) => s.id === round.session_id)!;
+  const passBar = thresholdsFor(session.institute_id).pass_bar;
   round.status = "completed";
   round.progress_pct = 100;
   round.score = finalScore;
-  round.verdict = finalScore >= 60 ? "passed" : "needs_improvement";
+  round.verdict = finalScore >= passBar ? "passed" : "needs_improvement";
   round.ended_at = new Date().toISOString();
-  round.transcript_key = `tr/${round.session_id}/${round.round}`;
-  round.rubric = [
-    { label: "Clarity", score: Math.min(100, finalScore + 6) },
-    { label: "Structure", score: Math.max(20, finalScore - 8) },
-    { label: "Depth", score: finalScore },
-  ];
-  round.strengths = ["Clear examples", "Calm delivery"];
-  round.gaps =
-    round.verdict === "needs_improvement"
-      ? [{ text: "Answer lacked structure", timestamp: "02:41" }]
-      : [];
+  round.transcript_key = round.round === "aptitude" ? null : `tr/${round.session_id}/${round.round}`;
+  Object.assign(round, roundFeedback(round.round, finalScore), rubric ? { rubric } : {});
   round.notes_for_next = "Probe depth on the weak areas noted above.";
 
-  const session = store.interview_sessions.find((s) => s.id === round.session_id)!;
   const rounds = store.session_rounds.filter((r) => r.session_id === session.id);
-  const avg = currentAverage(rounds);
-  session.average_score = avg;
-  session.ceo_unlocked = ceoUnlocked(rounds, thresholdsFor(session.institute_id));
+  session.average_score = currentAverage(rounds);
   if (round.round === "ceo") {
     session.status = "completed";
     session.completed_at = new Date().toISOString();
@@ -298,6 +310,7 @@ export function retryRound(user: SessionUser, roundId: string): SessionRound {
     rubric: [],
     strengths: [],
     gaps: [],
+    improve: [],
     started_at: null,
     ended_at: null,
   };
@@ -312,11 +325,10 @@ export function submitAptitude(
   answers: Record<string, number | string>,
 ): AptitudeAttempt {
   const round = findRound(user, roundId);
+  if (round.round !== "aptitude") throw new Error("Not an aptitude round");
   const store = getStore();
-  let correct = 0;
-  for (const q of aptitudeQuestions) {
-    if (q.kind === "mcq" && answers[q.id] === q.correct) correct += 1;
-  }
+  const isRight = (q: (typeof aptitudeQuestions)[number]) => answers[q.id] === q.correct;
+  const correct = aptitudeQuestions.filter(isRight).length;
   const attempt: AptitudeAttempt = {
     id: nextId("apt"),
     institute_id: round.institute_id,
@@ -324,13 +336,41 @@ export function submitAptitude(
     questions: aptitudeQuestions,
     answers,
     mcq_score: correct,
-    written_feedback: "Written answers show clear thinking; tighten structure.",
+    written_feedback: null,
     submitted_at: new Date().toISOString(),
   };
   store.aptitude_attempts.push(attempt);
-  persist();
+  const rubric = ROUND_CHECKS.aptitude.map((topic) => {
+    const qs = aptitudeQuestions.filter((q) => q.topic === topic);
+    const right = qs.filter(isRight).length;
+    return { label: `${topic} · ${right} of ${qs.length}`, score: qs.length ? Math.round((right / qs.length) * 100) : 0 };
+  });
+  finishRound(round, Math.round((correct / aptitudeQuestions.length) * 100), rubric);
   return attempt;
 }
+
+/** The latest submitted aptitude for a round, for the review slides. */
+export function getAptitudeAttempt(user: SessionUser, roundId: string): AptitudeAttempt | null {
+  findRound(user, roundId);
+  return getStore().aptitude_attempts.filter((a) => a.round_id === roundId).pop() ?? null;
+}
+
+/** "Unlock CEO round": allowed once HR BP is done and the 3-round average meets the threshold. */
+export function unlockCeo(user: SessionUser): InterviewSession {
+  const student = requireStudent(user);
+  const store = getStore();
+  const session = store.interview_sessions
+    .filter((s) => s.student_id === student.id && s.status === "in_progress")
+    .sort((a, b) => b.attempt_no - a.attempt_no)[0];
+  if (!session) throw new Error("No active session");
+  const rounds = store.session_rounds.filter((r) => r.session_id === session.id);
+  if (!canUnlockCeo(rounds, thresholdsFor(session.institute_id))) throw new Error("CEO round is not available yet");
+  session.ceo_unlocked = true;
+  persist();
+  return session;
+}
+
+export { aptitudeQuestions };
 
 export function decideOffer(user: SessionUser, offerId: string, decision: "accepted" | "declined"): Offer {
   const student = requireStudent(user);

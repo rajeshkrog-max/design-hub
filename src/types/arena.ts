@@ -1,7 +1,7 @@
 // Data contract — matches the future database tables one to one (snake_case).
 // Types only; no database. Mock data lives in src/data/mock/.
 
-export type RoundKey = "screening" | "hr_bp" | "functional" | "ceo";
+export type RoundKey = "screening" | "aptitude" | "hr_bp" | "ceo";
 export type SessionStatus = "in_progress" | "completed" | "abandoned" | "restarted";
 export type RoundStatus = "locked" | "ready" | "live" | "completed" | "incomplete";
 export type RoundVerdict = "passed" | "needs_improvement";
@@ -231,6 +231,8 @@ export interface SessionRound {
   rubric: RubricBar[];
   strengths: string[];
   gaps: GapEvidence[];
+  /** what to work on before the next attempt */
+  improve: string[];
   expertise: string[];
   notes_for_next: string;
   transcript_key: string | null;

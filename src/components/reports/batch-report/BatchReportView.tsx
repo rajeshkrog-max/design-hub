@@ -68,7 +68,7 @@ export function BatchReportView({ user, batchId, back }: { user: SessionUser; ba
 
       <Page n={3} title="Round completion funnel">
         <div className="space-y-4">
-          {(["screening", "hr_bp", "functional", "ceo"] as const).map((round) => {
+          {(["screening", "aptitude", "hr_bp", "ceo"] as const).map((round) => {
             const n = students.filter((d) => d.rounds.some((r) => r.round === round && r.status === "completed")).length;
             const pct = Math.round((n / total) * 100);
             return (

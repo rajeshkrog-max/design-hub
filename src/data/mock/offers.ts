@@ -14,6 +14,6 @@ export const offers: Offer[] = [
 ];
 
 export const restartRequests: RestartRequest[] = [
-  { id: "rr-1", institute_id: byIndex(11).institute_id!, student_id: byIndex(11).student_id, session_id: byIndex(11).id, reason: "I was unwell during the functional round and want a fair second attempt.", status: "pending", decided_by: null, decided_at: null, created_at: "2026-09-20" },
+  { id: "rr-1", institute_id: byIndex(11).institute_id!, student_id: byIndex(11).student_id, session_id: byIndex(11).id, reason: "I was unwell during the HR BP round and want a fair second attempt.", status: "pending", decided_by: null, decided_at: null, created_at: "2026-09-20" },
   { id: "rr-2", institute_id: byIndex(12).institute_id!, student_id: byIndex(12).student_id, session_id: byIndex(12).id, reason: "Network issues disrupted two rounds.", status: "approved", decided_by: "iu-1", decided_at: "2026-09-21", created_at: "2026-09-19" },
 ];

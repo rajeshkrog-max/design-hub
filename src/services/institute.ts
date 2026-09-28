@@ -1,5 +1,5 @@
 import { getStore, nextId, persist } from "@/data/mock/store";
-import { INSTITUTE_CREDITS } from "@/lib/rules";
+import { INSTITUTE_CREDITS, ROUND_ORDER } from "@/lib/rules";
 import { deriveStudent, logAudit } from "./student";
 import type { Batch, SessionUser, Student, StudentDerived } from "@/types/arena";
 
@@ -25,8 +25,8 @@ export function getInstituteOverview(user: SessionUser) {
     { label: "Invited", value: count(() => true) },
     { label: "Profile done", value: count((d) => !!d.profile?.required_complete) },
     { label: "Screening", value: count((d) => d.rounds.some((r) => r.round === "screening" && r.status === "completed")) },
+    { label: "Aptitude", value: count((d) => d.rounds.some((r) => r.round === "aptitude" && r.status === "completed")) },
     { label: "HR BP", value: count((d) => d.rounds.some((r) => r.round === "hr_bp" && r.status === "completed")) },
-    { label: "Functional", value: count((d) => d.rounds.some((r) => r.round === "functional" && r.status === "completed")) },
     { label: "CEO unlocked", value: count((d) => !!d.session?.ceo_unlocked) },
     { label: "Offer accepted", value: count((d) => d.offer?.decision === "accepted") },
   ].map((f) => ({ ...f, pct: Math.round((f.value / total) * 100) }));
@@ -208,7 +208,7 @@ export function getAnalytics(user: SessionUser) {
     .map(([text, n]) => ({ text, pct: Math.round((n / total) * 100) }))
     .sort((a, b) => b.pct - a.pct);
 
-  const roundNames = ["screening", "hr_bp", "functional", "ceo"] as const;
+  const roundNames = ROUND_ORDER;
   const passRates = roundNames.map((round) => {
     const done = students.flatMap((d) => d.rounds.filter((r) => r.round === round && r.is_current && r.status === "completed"));
     const passed = done.filter((r) => r.verdict === "passed").length;

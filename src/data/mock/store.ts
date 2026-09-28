@@ -36,7 +36,7 @@ export interface Store {
   audit_log: AuditLogEntry[];
 }
 
-const KEY = "sera-store-v3";
+const KEY = "sera-store-v4";
 
 function seed(): Store {
   return {
